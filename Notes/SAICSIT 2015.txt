@@ -1,0 +1,2 @@
+## RESULTS ###
+To obtain the kind of results mentioned in the paper, generate a training set, extract features (using the FeatureExtraction package), then do parameter tuning (to obtain the values in Table 1) with the RatingPrediction package.  Thereafter, the classification results in Table 2 and 3 can be obtained by using main.py in the RatingPrediction package.
