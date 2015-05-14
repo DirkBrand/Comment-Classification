@@ -8,6 +8,7 @@ from math import log
 import re, collections
 
 import nltk
+from nltk.corpus import wordnet as wn
 from nltk.corpus import names, stopwords
 
 from Profiling.timer import timefunc
@@ -29,7 +30,33 @@ def words_from_list(filepath):
         words.append(line.strip())
         
     return words
-      
+     
+def is_noun(tag):
+    return tag in ['NN', 'NNS', 'NNP', 'NNPS']
+
+
+def is_verb(tag):
+    return tag in ['VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ']
+
+
+def is_adverb(tag):
+    return tag in ['RB', 'RBR', 'RBS']
+
+
+def is_adjective(tag):
+    return tag in ['JJ', 'JJR', 'JJS']
+
+def penn_to_wn(tag):
+    if is_adjective(tag):
+        return wn.ADJ
+    elif is_noun(tag):
+        return wn.NOUN
+    elif is_adverb(tag):
+        return wn.ADV
+    elif is_verb(tag):
+        return wn.VERB
+    return wn.NOUN
+ 
 def getVF(pf):  
     vf = 0  
     if 'VB' in pf.keys():
@@ -102,7 +129,7 @@ def edits1(word):
 def known_edits2(word):
     return set(e2 for e1 in edits1(word) for e2 in edits1(e1) if e2 in NWORDS)
 
-def known(words): return set(w for w in words if w in NWORDS or w in FNAMES or w in MNAMES)
+def known(words): return [w for w in words if w in NWORDS or w in FNAMES or w in MNAMES]
 
 
 def correct(word):

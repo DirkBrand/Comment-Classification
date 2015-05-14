@@ -23,11 +23,11 @@ yn = load_numpy_matrix(feature_set_path+ 'valueVector.npy')[:,valueV]
 #yn = load_numpy_matrix(feature_set_path+ 'sentenceValueVector.npy')[:,valueV]
 
 #Xn = np.hstack((load_numpy_matrix(feature_set_path+ 'featureArray.npy'),load_numpy_matrix(feature_set_path+ 'socialVector.npy') ))
-Xn = load_sparse_csr(feature_set_path+ 'binaryWordData.npz') 
+#Xn = load_sparse_csr(feature_set_path+ 'binaryWordData.npz') 
 #Xn = load_sparse_csr(feature_set_path+ 'freqWordData.npz')  
 #Xn = load_sparse_csr(feature_set_path+ 'tfidfWordData.npz') 
 #Xn = load_sparse_csr(feature_set_path+ 'bigramBinaryWordData.npz')
-#Xn = load_sparse_csr(feature_set_path+ 'bigramTfidfWordData.npz')
+Xn = load_sparse_csr(feature_set_path+ 'bigramTfidfWordData.npz')
 #Xn = load_sparse_csr(feature_set_path+ 'trigramBinaryWordData.npz')
 #Xn = load_sparse_csr(feature_set_path+ 'trigramTfidfWordData.npz')
 #Xn = load_sparse_csr(feature_set_path+ 'quadgramBinaryWordData.npz')
@@ -55,13 +55,13 @@ Xn = load_sparse_csr(feature_set_path+ 'binaryWordData.npz')
 print Xn.shape
 
 # FEATURE SELECTION
-Xn = SelectPercentile(score_func=f_classif, percentile=perc).fit_transform(Xn,yn) 
+Xn = SelectPercentile(score_func=chi2, percentile=perc).fit_transform(Xn,yn) 
 
 
 
 
 # SUBSET SELECTION
-sss = StratifiedShuffleSplit(yn, 1, test_size=0.75, random_state=0)
+sss = StratifiedShuffleSplit(yn, 1, test_size=0.90, random_state=0)
 for train, test in sss:
     Xn , yn = Xn[train], yn[train]
 
@@ -70,7 +70,6 @@ print yn.shape
 
 
 # FEATURE SCALING
-normalizer = preprocessing.Normalizer().fit(Xn)
 if scale == 1:
     Xn = preprocessing.normalize(Xn, axis=0, copy=False)
 elif scale == 2:
@@ -83,6 +82,7 @@ elif scale == 2:
 tuned_parameters = [{'kernel': ['rbf'], 'C': [0.1, 10, 100, 1000, 10000, 100000, 1000000],
                      'gamma': [0.001, 0.005, 0.01, 0.05, 0.1, 0.5]},
                     {'kernel': ['linear'], 'C': [0.001, 0.1, 10, 1000, 10000]}]
+
 
 params = {'kernel': ['rbf'], 'C': scipy.stats.expon(scale=100000),
                      'gamma': scipy.stats.expon(scale=0.1)}

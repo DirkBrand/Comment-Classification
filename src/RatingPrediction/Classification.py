@@ -21,12 +21,12 @@ import pandas as pd
 
 def svc_fit(X,y,kernel, C, gamma ):
     
-    clf = svm.SVC(C=C, gamma=gamma, kernel=kernel, class_weight='auto', cache_size=1000)
+    clf = svm.SVC(C=C, gamma=gamma, kernel=kernel, class_weight='auto', cache_size=1000, verbose=True)
     print clf
     return clf.fit(X, y)
 
 def linear_svc_fit(X,y,C):
-    clf = svm.SVC(kernel='linear', C=C)             
+    clf = svm.SVC(kernel='linear', C=C, verbose=True)             
     return clf.fit(X, y)
 
 
@@ -57,5 +57,5 @@ def draw_confusion_matrix(y_test, y_pred, labels):
     cm.columns.name = 'Predicted label'
     cm.index.name = 'True label'
     error_rate = (y_pred != y_test).mean()
-    print('error rate: %.2f' % error_rate)
+    print('mean error rate: %.2f' % error_rate)
     return cm

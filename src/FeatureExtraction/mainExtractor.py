@@ -7,23 +7,37 @@ Created on 13 May 2014
 from __builtin__ import dict
 from _collections import defaultdict
 from collections import Counter
+import collections
 from datetime import datetime
+from math import exp, sqrt
 import pickle
+import pprint
 import re
 import string
 from time import  mktime,strptime
 
 import nltk
 from nltk.chunk import ne_chunk
+from nltk.corpus import wordnet as wn
+from nltk.corpus import wordnet_ic
+from nltk.stem.porter import PorterStemmer
 from nltk.stem.snowball import SnowballStemmer
+from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.tag import pos_tag
-from nltk.tokenize import sent_tokenize
+from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.tokenize.regexp import RegexpTokenizer, wordpunct_tokenize
+from pywsd import disambiguate
+from pywsd.lesk import simple_lesk
+from pywsd.similarity import max_similarity as maxsim
 from scipy import stats
+from sklearn.cluster.k_means_ import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from textblob.blob import Blobber
+from textblob_aptagger.taggers import PerceptronTagger
 
+from DeepLearnings.FeatureExtraction import ENGAGE_MIN
 from FeatureExtraction.LexicalFeatures import words, pos_freq, getVF, getNF,\
-    getPN, known, swears, entropy
+    getPN, known, swears, entropy, penn_to_wn
 from FeatureExtraction.SentimentUtil import load_classifier, make_full_dict,\
     get_subjectivity, get_polarity_overlap
 from FeatureExtraction.SurfaceFeatures import lengthiness, question_frequency,\
@@ -32,12 +46,8 @@ from FeatureExtraction.SurfaceFeatures import lengthiness, question_frequency,\
 from Objects import CommentObject, ArticleObject, UserCommentObject, UserObject,\
     ArticleCommentObject
 from Profiling.timer import timefunc
-from TopicDiscovery import vocabulary
-from TopicDiscovery.lda import LDA, lda_learning
 from config import sentiment_path
 import numpy as np
-from DeepLearnings.FeatureExtraction import ENGAGE_MIN
-from nltk.stem.wordnet import WordNetLemmatizer
 
 
 pattern = r'''(?x) # set flag to allow verbose regexps
@@ -400,85 +410,6 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
     return featureMatrix
 
 
-def extract_user_topics(userList, userCount, numTopics):
-    featureMatrix = np.zeros([userCount,numTopics])
-
-    
-    tokenizer = RegexpTokenizer(r'[\w\']+')
-    
-    clf = load_classifier('sentiment_classifier.pickle')
-    
-    #Create global topicList
-    #create_global_topic_list(articleList)
-    tempVector = dict()
-    f = open('globalTopics' + '.pkl', 'rb')
-    tempVector =  pickle.load(f)
-    f.close()
-    theKeys = tempVector.keys()
-    
-    
-    
-    #Get topics of each article    
-    K = 1
-    c = 20
-    i = 10
-    df = 1
-    
-    index = 0
-    for user in userList: 
-        # Article body + all comments 
-        art = ''        
-        for comm in user.comments:
-            art += comm.body
-            
-        texts = [] 
-        
-        # Build document for LDA
-        for line in sent_tokenize(art):
-            doc = []       
-            tokens = wordpunct_tokenize(line)
-            words =  [word for word in tokens if word not in vocabulary.stopwords_list]              
-            
-            chunks = ne_chunk(pos_tag(words))
-            for chunk in chunks:
-                if hasattr(chunk, 'node'):            
-                    doc.append(' '.join(c[0] for c in chunk.leaves()))
-                else:
-                    doc.append(chunk[0])
-            
-            doc = [word.strip(string.punctuation) for word in doc if len(word.strip(string.punctuation)) > 1]
-            if len(doc) > 0:
-                texts.append(doc)
-                
-        voca = vocabulary.Vocabulary(True)
-        docs = [voca.doc_to_ids(doc) for doc in texts]
-        if df > 0: docs = voca.cut_low_freq(docs, df)        
-        lda = LDA(K, c,  0.5, 0.5, docs, voca.size(), False)  
-        if np.sum([w for w in docs]) == 0:
-            continue
-        topics = lda_learning(lda, 10 , voca)
-       
-        
-        # Sentiment
-        testSet = dict()
-        tokens = tokenizer.tokenize(art)
-        refWords = make_full_dict(tokens)
-        testSet.update(refWords)
-        probDist = clf.prob_classify(testSet)         
-        subj_obj = get_subjectivity(probDist)
-        
-        for top in (t for t in topics if tempVector.has_key(t)):
-            keyInd = theKeys.index(top)      
-            featureMatrix[index][keyInd] += subj_obj
-        index += 1
-        if index % 1000 == 0:
-            print "extracted", index, "features"
-                 
-    
-    
-    print "non-zero",np.count_nonzero(featureMatrix)
-    print "Percentage filled:%.2f" %(float(np.count_nonzero(featureMatrix))/(featureMatrix.shape[0]*featureMatrix.shape[1]))
-    return featureMatrix
 
 def extract_user_values(userList, userCount):
     valueVector = np.empty([userCount,4])
@@ -548,22 +479,28 @@ def extract_social_features(userList, articleList, commentCount):
                 
     return socialVector
 
+
+
 def extract_global_bag_of_words(commentList):
     corpus = []
     
-    stemmer = SnowballStemmer("english", ignore_stopwords=True)
     lemmatizer = WordNetLemmatizer()
+    
+    tb = Blobber(pos_tagger=PerceptronTagger())
     
     i = 0
     for art in commentList.items():        
         for comm in art[1]:
-            only = onlyWords(comm.lemma_body)
-            knownWords = known(only)
+            tagged = tb(comm.body).tags
+            # Remove stops
+            filtered_words = [w for w in tagged if not w[0] in stops]
             
-            # Remove Stops
-            filtered_words = [w for w in knownWords if not w in stops]
-            # Stemming
-            #filtered_words = [lemmatizer.lemmatize(w) for w in filtered_words]
+            # Remove punctuation
+            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
+            
+            # Lemmatize
+            filtered_words = [lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
+                     
             
             corpus.append(' '.join(filtered_words))
             if i % 1000 == 0:
@@ -572,8 +509,59 @@ def extract_global_bag_of_words(commentList):
             
             
     return corpus
+
+def process_text(commentList):
+    """ Tokenize text and stem words removing punctuation """
+    tokens = []
+    i = 0
+    for art in commentList.items():        
+        for comm in art[1]:
+            text = re.findall('[a-z]+',comm.body.lower())
+            tokens.append(' '.join(text))
+            if i % 1000 == 0:
+                print i, "processed"
+            i += 1
+            
+    return tokens
     
+def extract_global_bag_of_synsets(commentList):
+    corpus = []
+    global_synset_set = set()
     
+    sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
+    
+    # ISSUE throws away named entities
+    i = 0
+    for art in commentList.items():        
+        for comm in art[1]:
+            filtered_words = []
+            for sentence in sent_detector.tokenize(comm.body.strip()):
+                #print sentence       
+                dis = disambiguate(sentence, algorithm=maxsim, similarity_option='wup', keepLemmas=True)
+                for w in dis:
+                    # Only found words and nouns+verbs
+                    if w[2] is None:
+                        continue  
+                    
+                    if not w[2].pos() == wn.NOUN and not w[2].pos() == wn.VERB:
+                        continue
+                               
+                    #print w[1] ," - ", w[2], " - ", w[2].definition()
+                      
+                    filtered_words.append(w[1])
+                    global_synset_set.add(w[2])
+                 
+            corpus.append(' '.join(filtered_words).lower())
+            i += 1
+            print i
+            if i % 1000 == 0:
+                print i, "processed"
+                break
+        if i % 1000 == 0:
+            print i, "processed"
+            break
+            
+    return global_synset_set, corpus
     
 def extract_words(commentList, commentCount):    
     processed_comment_list = extract_global_bag_of_words(commentList)
@@ -619,6 +607,68 @@ def extract_words(commentList, commentCount):
     return binary_word_features, frequency_word_features, tfidf_word_features, bigram_binary_count_vect,  bigram_tfidf_word_features, trigram_binary_count_vect, trigram_tfidf_word_features, quadgram_binary_count_vect,quadgram_tfidf_count_vect 
 
 
+def extract_word_clusters(commentList, commentCount):
+    brown_ic = wordnet_ic.ic('ic-brown.dat')
+    global_bag_of_synsets, corpus = extract_global_bag_of_synsets(commentList)
+    similarity_dict = {}
+    i = 0
+    for syns_out in global_bag_of_synsets:
+        similarity_dict[syns_out] = {} 
+        for syns_in in global_bag_of_synsets:
+            similarity_dict[syns_out][syns_in] = exp(-syns_out.shortest_path_distance(syns_in))
+            if global_bag_of_synsets[syns_in].pos == global_bag_of_synsets[syns_out].pos:
+                similarity_dict[syns_out][syns_in] = global_bag_of_synsets[syns_out].lin_similarity(global_bag_of_synsets[syns_in], brown_ic)
+            else:
+                similarity_dict[syns_out][syns_in] = max(wn.path_similarity(global_bag_of_synsets[syns_out],global_bag_of_synsets[syns_in]), wn.path_similarity(global_bag_of_synsets[syns_in],global_bag_of_synsets[syns_out]))
+        
+            if i % 1000 == 0:
+                print i, 'synsets processed out of',len(global_bag_of_synsets)**2
+            i += 1
+
+    tuples = [(i[0], i[1].values()) for i in similarity_dict.items()] 
+    vectors = [np.array(tup[1]) for tup in tuples]
+
+    
+    # Rule of thumb
+    n = sqrt(len(global_bag_of_synsets)/2)
+    print "Number of clusters", n
+    km_model = KMeans(n_clusters=n)
+    km_model.fit(vectors)
+    
+    clustering = collections.defaultdict(list)
+    for idx, label in enumerate(km_model.labels_):
+        clustering[label].append(tuples[idx][0])
+        
+    pprint.pprint(dict(clustering), width=1)
+    
+    feature_vector = np.zeros([len(corpus),n])
+    
+    for i,comment in enumerate(corpus):
+        for w in comment.split():
+            for key, clust in clustering.items():
+                if w in clust:
+                    feature_vector[i][key] += 1
+        if i % 1000 == 0:
+            print i, 'comments processed'
+        
+    print feature_vector
+    '''
+    #corpus = extract_global_bag_of_words(commentList)
+    corpus = process_text(commentList)
+    vectorizer = TfidfVectorizer(analyzer='word', use_idf=True, smooth_idf=True, max_df=0.5,
+                                 min_df=0.1)
+ 
+    tfidf_model = vectorizer.fit_transform(corpus)
+    km_model = KMeans(n_clusters=1000)
+    km_model.fit(tfidf_model)
+    
+    clustering = collections.defaultdict(list)
+    for idx, label in enumerate(km_model.labels_):
+        clustering[label].append(idx)
+        
+    pprint(dict(clustering))
+    '''
+
 def create_global_topic_list(articleList):
     e = re.compile(r"\s(de)\s")
     u = re.compile(r"\s(du)\s")
@@ -650,84 +700,6 @@ def create_global_topic_list(articleList):
     pickle.dump(tempVector, f, pickle.HIGHEST_PROTOCOL)
     f.close()
 
-
-def extract_topics(articleList, commentCount, numWords):
-    featureMatrix = np.zeros([commentCount,numWords])
-
-    
-    tokenizer = RegexpTokenizer(r'[\w\']+')
-    
-    clf = load_classifier('sentiment_classifier.pickle')
-    
-    #Create global topicList
-    #create_global_topic_list(articleList)
-    tempVector = dict()
-    f = open('globalTopics' + '.pkl', 'rb')
-    tempVector =  pickle.load(f)
-    f.close()
-    theKeys = tempVector.keys()
-    
-    
-    
-    #Get topics of each article    
-    K = 1
-    c = 20
-    i = 10
-    df = 1
-    
-    index = 0
-    for commList in articleList.values(): 
-        # Article body + all comments 
-        art = commList[0].artBody        
-        for comm in commList:
-            art += comm.body
-            
-        texts = [] 
-        
-        # Build document for LDA
-        for line in sent_tokenize(art):
-            doc = []       
-            tokens = wordpunct_tokenize(line)
-            words =  [word for word in tokens if word not in vocabulary.stopwords_list]              
-            
-            chunks = ne_chunk(pos_tag(words))
-            for chunk in chunks:
-                if hasattr(chunk, 'node'):            
-                    doc.append(' '.join(c[0] for c in chunk.leaves()))
-                else:
-                    doc.append(chunk[0])
-            
-            doc = [word.strip(string.punctuation) for word in doc if len(word.strip(string.punctuation)) > 1]
-            if len(doc) > 0:
-                texts.append(doc)
-                
-        voca = vocabulary.Vocabulary(True)
-        docs = [voca.doc_to_ids(doc) for doc in texts]
-        if df > 0: docs = voca.cut_low_freq(docs, df)        
-        lda = LDA(K, c,  0.5, 0.5, docs, voca.size(), False)        
-        topics = lda_learning(lda, 10 , voca)
-        
-        # Sentiment
-        for comm in commList:
-            testSet = dict()
-            tokens = tokenizer.tokenize(comm.body)
-            refWords = make_full_dict(tokens)
-            testSet.update(refWords)
-            probDist = clf.prob_classify(testSet)         
-            subj_obj = get_subjectivity(probDist)
-            
-            for top in (t for t in topics if tempVector.has_key(t)):
-                keyInd = theKeys.index(top)      
-                featureMatrix[index][keyInd] += probDist.prob('pos')
-            index += 1
-            if index % 1000 == 0:
-                print "extracted", index, "features"
-                 
-    
-    
-    print "non-zero",np.count_nonzero(featureMatrix)
-    print "Percentage filled:%.2f" %(float(np.count_nonzero(featureMatrix))/(featureMatrix.shape[0]*featureMatrix.shape[1]))
-    return featureMatrix
             
 
 def extract_bigrams(articleList, commentCount):

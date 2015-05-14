@@ -19,9 +19,9 @@ from FeatureExtraction.SentimentUtil import create_classifier, make_full_dict,\
     create_word_scores, find_best_words, evaluate_features, best_word_features,\
     extract_features
 from FeatureExtraction.mainExtractor import read_comments, extract_values, extract_feature_matrix,\
-    extract_Time_Data, extract_words, extract_topics, read_user_comments,\
-    extract_user_values, extract_user_topics, read_user_data,\
-    extract_social_features, extract_sentence_values
+    extract_Time_Data, extract_words,  read_user_comments,\
+    extract_user_values,  read_user_data,\
+    extract_social_features, extract_sentence_values, extract_word_clusters
 from config import sentiment_path, feature_set_path, comment_data_path
 import numpy as np
 
@@ -64,6 +64,10 @@ def extractSaveSentenceValues(articleList, commentList, parentList,commentCount)
     valueVector = extract_sentence_values(articleList,commentList, parentList, getCommentCount(4, commentList))
     print "Extracted values"
     save_numpy_matrix(feature_set_path + "sentenceValueVector",valueVector) 
+
+def extractSynsetData(articleList, commentList, commentCount):
+    wd = extract_word_clusters(commentList, commentCount)
+    save_sparse_csr(feature_set_path + "clusteredWordData",wd) 
     
 def extractWordData(articleList, commentList, commentCount):
     bwd, fwd, twd, bbwd, btwd, tbwd, ttwd, qbwd, qtwd = extract_words(commentList, commentCount)
@@ -111,22 +115,7 @@ def extractTimeData(articleList, commentList, commentCount):
     td = extract_Time_Data(articleList, commentCount)
     save_sparse_csr("timeData",td) 
 
-def extractTopicData(articleList, commentList, commentCount, numWords):
-    w = extract_topics(articleList, commentCount, numWords)
-    save_sparse_csr(feature_set_path + "topicData",w) 
     
-def extractUserData():
-    userList, userCount = read_user_comments(comment_data_path + 'comments.txt')
-    print "Processed", userCount, "Users"
-    
-    valueVector = extract_user_values(userList, userCount) 
-    print "Extracted values"
-    featureMatrix = extract_user_topics(userList,userCount,100)            
-    print "Extracted Features"
-    save_sparse_csr("valueVectorTest",valueVector) 
-    save_sparse_csr("featureArrayTest",featureMatrix) 
-    
-    print "Saved User Data"
     
     
 def save_sparse_csr(filename,array):
@@ -195,12 +184,12 @@ if __name__ == '__main__':
     
     # Classic
     #extractSaveValues(articleList,commentList, parentList,commentCount)
-    extractSaveFeatures(articleList,commentList, parentList,commentCount)
+    #extractSaveFeatures(articleList,commentList, parentList,commentCount)
     #extractSocialData(articleList, commentList, commentCount)
     
     # Vector Space
     #extractWordData(articleList, commentList, commentCount)
-    
+    extractSynsetData(articleList, commentList, commentCount)
     
     #extractTopicData(articleList, commentCount,100)    
     #extractTimeData(articleList, commentCount)    
