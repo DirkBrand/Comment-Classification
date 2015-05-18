@@ -70,7 +70,7 @@ def extractSynsetData(articleList, commentList, commentCount):
     save_sparse_csr(feature_set_path + "clusteredWordData",wd) 
     
 def extractWordData(articleList, commentList, commentCount):
-    bwd, fwd, twd, bbwd, btwd, tbwd, ttwd, qbwd, qtwd = extract_words(commentList, commentCount)
+    bwd, fwd, twd, bbwd, btwd, tbwd, ttwd, qbwd, qtwd, qowd = extract_words(commentList, commentCount)
     save_sparse_csr(feature_set_path + "binaryWordData",bwd) 
     save_sparse_csr(feature_set_path + "freqWordData",fwd) 
     save_sparse_csr(feature_set_path + "tfidfWordData",twd) 
@@ -79,7 +79,8 @@ def extractWordData(articleList, commentList, commentCount):
     save_sparse_csr(feature_set_path + "trigramBinaryWordData",tbwd) 
     save_sparse_csr(feature_set_path + "trigramTfidfWordData",ttwd) 
     save_sparse_csr(feature_set_path + "quadgramBinaryWordData",qbwd) 
-    save_sparse_csr(feature_set_path + "quadgramTfidfWordData",qtwd) 
+    save_sparse_csr(feature_set_path + "quadgramTfidfWordData",qtwd)  
+    save_sparse_csr(feature_set_path + "quadgramOnlyTfidfWordData",qowd) 
     
 def extractSocialData(articleList, commentList, commentCount):
     userList, userCount = read_user_data(comment_data_path + 'userdata.txt');
@@ -188,8 +189,8 @@ if __name__ == '__main__':
     #extractSocialData(articleList, commentList, commentCount)
     
     # Vector Space
-    #extractWordData(articleList, commentList, commentCount)
-    extractSynsetData(articleList, commentList, commentCount)
+    extractWordData(articleList, commentList, commentCount)
+    #extractSynsetData(articleList, commentList, commentCount)
     
     #extractTopicData(articleList, commentCount,100)    
     #extractTimeData(articleList, commentCount)    

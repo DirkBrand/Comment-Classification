@@ -24,7 +24,7 @@ def nsyl(word):
     if word.lower() not in d:
         return 1
     
-    return max([len([y for y in x if isdigit(y[-1])]) for x in d[word.lower()]])
+    return max([len(list(y for y in x if y[-1].isdigit())) for x in d[word.lower()]])
 
 
     

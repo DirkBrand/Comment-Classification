@@ -481,11 +481,14 @@ def extract_social_features(userList, articleList, commentCount):
 
 
 
-def extract_global_bag_of_words(commentList):
+def extract_global_bag_of_words(commentList, synsets_also=False):
     corpus = []
     
-    lemmatizer = WordNetLemmatizer()
+    synset_corpus = []
     
+    global_synset_set = set()    
+    
+    lemmatizer = WordNetLemmatizer()    
     tb = Blobber(pos_tagger=PerceptronTagger())
     
     i = 0
@@ -500,15 +503,30 @@ def extract_global_bag_of_words(commentList):
             
             # Lemmatize
             filtered_words = [lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
-                     
+                
+            filtered_synsets = []
+            if synsets_also:
+                for w in filtered_words:
+                    syns = wn.synsets(w)
+                    for s in syns:
+                        if not s.pos() == wn.NOUN and not s.pos() == wn.VERB:
+                            continue
+                        global_synset_set.add(s)
+                        filtered_synsets.append(s)
             
+            synset_corpus.append(filtered_synsets)
             corpus.append(' '.join(filtered_words))
+            i += 1
             if i % 1000 == 0:
                 print i, "lemmatized"
-            i += 1
+                
+        
+        if i % 1000 == 0:
+            pass
+        
+    print 'Extracted', len(global_synset_set), 'synsets'
             
-            
-    return corpus
+    return corpus, synset_corpus, global_synset_set
 
 def process_text(commentList):
     """ Tokenize text and stem words removing punctuation """
@@ -537,21 +555,21 @@ def extract_global_bag_of_synsets(commentList):
             filtered_words = []
             for sentence in sent_detector.tokenize(comm.body.strip()):
                 #print sentence       
-                dis = disambiguate(sentence, algorithm=maxsim, similarity_option='wup', keepLemmas=True)
+                dis = disambiguate(sentence, algorithm=maxsim, similarity_option='wup')
                 for w in dis:
                     # Only found words and nouns+verbs
-                    if w[2] is None:
+                    if w[1] is None:
                         continue  
                     
-                    if not w[2].pos() == wn.NOUN and not w[2].pos() == wn.VERB:
+                    if not w[1].pos() == wn.NOUN and not w[1].pos() == wn.VERB:
                         continue
                                
-                    #print w[1] ," - ", w[2], " - ", w[2].definition()
+                    #print w[0] ," - ", w[1], " - ", w[1].definition()
                       
                     filtered_words.append(w[1])
-                    global_synset_set.add(w[2])
+                    global_synset_set.add(w[1])
                  
-            corpus.append(' '.join(filtered_words).lower())
+            corpus.append(filtered_words)
             i += 1
             print i
             if i % 1000 == 0:
@@ -564,7 +582,7 @@ def extract_global_bag_of_synsets(commentList):
     return global_synset_set, corpus
     
 def extract_words(commentList, commentCount):    
-    processed_comment_list = extract_global_bag_of_words(commentList)
+    processed_comment_list, a, b = extract_global_bag_of_words(commentList)
     
     binary_count_vect = CountVectorizer(analyzer='word', max_df=0.5, binary=True, dtype=float)
     freq_count_vect = CountVectorizer(analyzer='word', max_df=0.5, dtype=float)
@@ -575,6 +593,7 @@ def extract_words(commentList, commentCount):
     trigram_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(1,3), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
     quadgram_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(1,4), max_df=0.5, binary=True, dtype=float)
     quadgram_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(1,4), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
+    quadgram_only_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(4,4), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
     
     
     
@@ -592,6 +611,7 @@ def extract_words(commentList, commentCount):
     quadgram_binary_count_vect = quadgram_binary_count_vect.fit_transform(processed_comment_list)
     quadgram_tfidf_count_vect = quadgram_tfidf_count_vect.fit_transform(processed_comment_list)
                 
+    quadgram_only_tfidf_count_vect = quadgram_only_tfidf_count_vect.fit_transform(processed_comment_list)
     
     print binary_count_vect.vocabulary_
     print binary_word_features.shape
@@ -603,26 +623,28 @@ def extract_words(commentList, commentCount):
     print trigram_tfidf_word_features.shape
     print quadgram_binary_count_vect.shape
     print quadgram_tfidf_count_vect.shape
+    print quadgram_only_tfidf_count_vect.shape
     
-    return binary_word_features, frequency_word_features, tfidf_word_features, bigram_binary_count_vect,  bigram_tfidf_word_features, trigram_binary_count_vect, trigram_tfidf_word_features, quadgram_binary_count_vect,quadgram_tfidf_count_vect 
+    return binary_word_features, frequency_word_features, tfidf_word_features, bigram_binary_count_vect,  bigram_tfidf_word_features, trigram_binary_count_vect, trigram_tfidf_word_features, quadgram_binary_count_vect,quadgram_tfidf_count_vect, quadgram_only_tfidf_count_vect 
 
 
 def extract_word_clusters(commentList, commentCount):
     brown_ic = wordnet_ic.ic('ic-brown.dat')
-    global_bag_of_synsets, corpus = extract_global_bag_of_synsets(commentList)
+    a, corpus, global_synsets = extract_global_bag_of_words(commentList, True)
     similarity_dict = {}
     i = 0
-    for syns_out in global_bag_of_synsets:
-        similarity_dict[syns_out] = {} 
-        for syns_in in global_bag_of_synsets:
-            similarity_dict[syns_out][syns_in] = exp(-syns_out.shortest_path_distance(syns_in))
-            if global_bag_of_synsets[syns_in].pos == global_bag_of_synsets[syns_out].pos:
-                similarity_dict[syns_out][syns_in] = global_bag_of_synsets[syns_out].lin_similarity(global_bag_of_synsets[syns_in], brown_ic)
+    t = len(global_synsets)**2
+    
+    for syn_out in global_synsets:
+        similarity_dict[syn_out] = {} 
+        for syn_in in global_synsets:
+            if syn_in.pos() == syn_out.pos():
+                similarity_dict[syn_out][syn_in] = syn_out.lin_similarity(syn_in, brown_ic)
             else:
-                similarity_dict[syns_out][syns_in] = max(wn.path_similarity(global_bag_of_synsets[syns_out],global_bag_of_synsets[syns_in]), wn.path_similarity(global_bag_of_synsets[syns_in],global_bag_of_synsets[syns_out]))
+                similarity_dict[syn_out][syn_in] = max(wn.path_similarity(syn_out,syn_in), wn.path_similarity(syn_in,syn_out))
         
-            if i % 1000 == 0:
-                print i, 'synsets processed out of',len(global_bag_of_synsets)**2
+            if i % 10000 == 0:
+                print i, 'synsets processed out of',len(global_synsets)**2, '(',float(i)/(t),'%)'
             i += 1
 
     tuples = [(i[0], i[1].values()) for i in similarity_dict.items()] 
@@ -630,7 +652,7 @@ def extract_word_clusters(commentList, commentCount):
 
     
     # Rule of thumb
-    n = sqrt(len(global_bag_of_synsets)/2)
+    n = sqrt(len(global_synsets)/2)
     print "Number of clusters", n
     km_model = KMeans(n_clusters=n)
     km_model.fit(vectors)
@@ -644,7 +666,7 @@ def extract_word_clusters(commentList, commentCount):
     feature_vector = np.zeros([len(corpus),n])
     
     for i,comment in enumerate(corpus):
-        for w in comment.split():
+        for w in comment:
             for key, clust in clustering.items():
                 if w in clust:
                     feature_vector[i][key] += 1
@@ -794,6 +816,9 @@ def read_comments(filename):
     articleList = dict()
     CommentsList = defaultdict(list)
     parentList = dict()
+    
+    unique_comments = set()
+    
     commentCount = 0
     totalCount = 0
     for line in f:
@@ -819,6 +844,12 @@ def read_comments(filename):
         pos_body = temp[15].replace('..', '.').replace('.', '. ')             
     
         totalCount += 1
+        '''
+        if body in unique_comments:
+            continue
+        else:
+            unique_comments.add(body)
+        '''
         
         '''
         if likes + dislikes == 0:

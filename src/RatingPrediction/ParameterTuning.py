@@ -27,11 +27,12 @@ yn = load_numpy_matrix(feature_set_path+ 'valueVector.npy')[:,valueV]
 #Xn = load_sparse_csr(feature_set_path+ 'freqWordData.npz')  
 #Xn = load_sparse_csr(feature_set_path+ 'tfidfWordData.npz') 
 #Xn = load_sparse_csr(feature_set_path+ 'bigramBinaryWordData.npz')
-Xn = load_sparse_csr(feature_set_path+ 'bigramTfidfWordData.npz')
+#Xn = load_sparse_csr(feature_set_path+ 'bigramTfidfWordData.npz')
 #Xn = load_sparse_csr(feature_set_path+ 'trigramBinaryWordData.npz')
 #Xn = load_sparse_csr(feature_set_path+ 'trigramTfidfWordData.npz')
 #Xn = load_sparse_csr(feature_set_path+ 'quadgramBinaryWordData.npz')
 #Xn = load_sparse_csr(feature_set_path+ 'quadgramTfidfWordData.npz')
+Xn = load_sparse_csr(feature_set_path+ 'quadgramOnlyTfidfWordData.npz')
 
 #Xn = load_numpy_matrix(feature_set_path+ 'POS_model_MinMaxMeanFeatures.npy')
 #Xn = load_numpy_matrix(feature_set_path+ 'POS_model_TfidfWeightedSumFeatures.npy')

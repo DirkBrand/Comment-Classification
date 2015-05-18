@@ -32,7 +32,7 @@ import numpy as np
 
 
 VALUES = [ 'totalVotes', 'percentage of total','ratio','Status']
-FEATURES = [ 'CF', 'BTF','FTF','TTF', 'BBTF', 'BTTF', 'TBTF', 'TTTF', 'QBTF', 'QTTF', 'SL-MMM', 'SL-TWS', 'SL-BOC', 'POS-MMM', 'POS-TWS', 'POS-BOC', 'BG-MMM', 'BG-TWS', 'BG-BOC', 'Google-MMM', 'Google-TWS', 'Google-BOC']
+FEATURES = [ 'CF', 'BTF','FTF','TTF', 'BBTF', 'BTTF', 'TBTF', 'TTTF', 'QBTF', 'QTTF', 'QuadOnly', 'SL-MMM', 'SL-TWS', 'SL-BOC', 'POS-MMM', 'POS-TWS', 'POS-BOC', 'BG-MMM', 'BG-TWS', 'BG-BOC', 'Google-MMM', 'Google-TWS', 'Google-BOC']
             
 
 
@@ -232,28 +232,32 @@ def runClassificationTest(X, y, model, featureset):
         Lc = 1
         gamma = 0.072 
     if featureset == 5: #Bigram tfidf word Features
-        C = 390255
-        Lc = 5
-        gamma = 0.3361
+        C = 591
+        Lc = 1
+        gamma = 0.011
     if featureset == 6: #Trigram binary word Features
-        C = 139602
-        Lc = 10
-        gamma = 0.1312
+        C = 610
+        Lc = 1
+        gamma = 0.005
     if featureset == 7: #Trigram tfidf word Features
-        C = 139602
+        C = 9
         Lc = 10
-        gamma = 0.1312
+        gamma = 0.001
     if featureset == 8: #Quadgram binary word Features
-        C = 139602
+        C = 7079
         Lc = 10
-        gamma = 0.1312
+        gamma = 0.003
     if featureset == 9: #Quadgram tfidf word Features
-        C = 139602
+        C = 447
         Lc = 10
-        gamma = 0.1312
+        gamma = 0.003
+    if featureset == 10: #Quadgram ONLY tfidf word Features
+        C = 32840
+        Lc = 10
+        gamma = 0.186
         
         
-    if featureset == 10: #sentence MMM Features
+    if featureset == 11: #sentence MMM Features
         C = 7524
         Lc = 100000
         gamma = 0.0769
@@ -372,7 +376,7 @@ def test(X, y):
 reg = False
 scale = True
 valueV = 3
-featureV = 4
+featureV = 10
 perc = 20
   
 if __name__ == '__main__':
@@ -405,8 +409,11 @@ if __name__ == '__main__':
         X = load_sparse_csr(feature_set_path +  r'quadgramBinaryWordData.npz')  
     elif featureV == 9:
         X = load_sparse_csr(feature_set_path +  r'quadgramTfidfWordData.npz')  
-        
     elif featureV == 10:
+        X = load_sparse_csr(feature_set_path +  r'quadgramOnlyTfidfWordData.npz') 
+         
+        
+    elif featureV == 11:
         X = load_numpy_matrix(feature_set_path +  r'sentence_model_MinMaxMeanFeatures.npy')  
     elif featureV == 11:
         X = load_numpy_matrix(feature_set_path +  r'sentence_model_TfidfWeightedSumFeatures.npy')  
@@ -486,16 +493,18 @@ if __name__ == '__main__':
         print "\nCLASSIFICATION\n"
         print "Nr Of Features", Xn.shape[1]
         print "Nr Of test Rows", Xn.shape[0]/3
-        for m in [1,2]:
+        for m in [2]:
             print "STARTING CLASSIFICATION"
             clf = runClassificationTest(Xn, yn, m, featureV)
+            
             
             print "Accuracy: %0.3f " % (accuracy_score(yt, clf.predict(Xt)))
             print "precision %0.3f " % (precision_score(yt, clf.predict(Xt)))
             print "recall %0.3f " % (recall_score(yt, clf.predict(Xt)))
             print "F1 Score %0.3f " % (f1_score(yt, clf.predict(Xt)))
+            #print cross_validation.cross_val_score(clf, Xn, yn, scoring=f1_score)
     
-            print draw_confusion_matrix(yt, clf.predict(Xt), [0,1])
+            #print draw_confusion_matrix(yt, clf.predict(Xt), [0,1])
         
     
     

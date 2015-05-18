@@ -3,6 +3,7 @@ Created on 13 Apr 2015
 
 @author: Dirk
 '''
+from nltk.tokenize import word_tokenize
 '''
 x_train = [[1.0, 5.0, 1.0],
                     [2.0, 6.0, 2.0]]
@@ -189,12 +190,8 @@ pprint.pprint(dict(clustering), width=1)
 vect = np.zeros([1, 20])
 
 for sentence in sent_detector.tokenize(test_sentence.strip()):
-    # print sentence       
-    dis = disambiguate(sentence, algorithm=maxsim, similarity_option='lin', keepLemmas=True)
-    for w in dis:
-        if w[2] is None :
-            continue  
-                   
+    # print sentence           
+    for w in word_tokenize(sentence):                  
         # print w[1] ," - ", w[2], " - ", w[2].definition()
         for key, clust in clustering.items():
             if w[1] in clust:
@@ -218,4 +215,4 @@ def write_csv(name, cats, dict):
     f.close()
  
 
-write_csv("similarities", cats + verbs, similarity_dict)
+#write_csv("similarities", cats + verbs, similarity_dict)
