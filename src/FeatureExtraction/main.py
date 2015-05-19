@@ -70,7 +70,7 @@ def extractSynsetData(articleList, commentList, commentCount):
     save_sparse_csr(feature_set_path + "clusteredWordData",wd) 
     
 def extractWordData(articleList, commentList, commentCount):
-    bwd, fwd, twd, bbwd, btwd, tbwd, ttwd, qbwd, qtwd, qowd = extract_words(commentList, commentCount)
+    bwd, fwd, twd, bbwd, btwd, tbwd, ttwd, qbwd, qtwd, bowd, bowd2, towd, towd2,  qowd, qowd2  = extract_words(commentList, commentCount)
     save_sparse_csr(feature_set_path + "binaryWordData",bwd) 
     save_sparse_csr(feature_set_path + "freqWordData",fwd) 
     save_sparse_csr(feature_set_path + "tfidfWordData",twd) 
@@ -80,7 +80,13 @@ def extractWordData(articleList, commentList, commentCount):
     save_sparse_csr(feature_set_path + "trigramTfidfWordData",ttwd) 
     save_sparse_csr(feature_set_path + "quadgramBinaryWordData",qbwd) 
     save_sparse_csr(feature_set_path + "quadgramTfidfWordData",qtwd)  
-    save_sparse_csr(feature_set_path + "quadgramOnlyTfidfWordData",qowd) 
+    
+    save_sparse_csr(feature_set_path + "bigramOnlyBinaryWordData",bowd)
+    save_sparse_csr(feature_set_path + "bigramOnlyTfidfWordData",bowd2)
+    save_sparse_csr(feature_set_path + "trigramOnlyBinaryWordData",towd)
+    save_sparse_csr(feature_set_path + "trigramOnlyTfidfWordData",towd2)
+    save_sparse_csr(feature_set_path + "quadgramOnlyBinaryWordData",qowd) 
+    save_sparse_csr(feature_set_path + "quadgramOnlyTfidfWordData",qowd2) 
     
 def extractSocialData(articleList, commentList, commentCount):
     userList, userCount = read_user_data(comment_data_path + 'userdata.txt');

@@ -32,7 +32,7 @@ import numpy as np
 
 
 VALUES = [ 'totalVotes', 'percentage of total','ratio','Status']
-FEATURES = [ 'CF', 'BTF','FTF','TTF', 'BBTF', 'BTTF', 'TBTF', 'TTTF', 'QBTF', 'QTTF', 'QuadOnly', 'SL-MMM', 'SL-TWS', 'SL-BOC', 'POS-MMM', 'POS-TWS', 'POS-BOC', 'BG-MMM', 'BG-TWS', 'BG-BOC', 'Google-MMM', 'Google-TWS', 'Google-BOC']
+FEATURES = [ 'CF', 'BTF','FTF','TTF', 'BBTF', 'BTTF', 'TBTF', 'TTTF', 'QBTF', 'QTTF', 'BiOnlyBi','BiOnlyTFIDF', 'TriOnlyBi', 'TriOnlyTFIDF','QuadOnlyBi','QuadOnlyTFIDF',  'SL-MMM', 'SL-TWS', 'SL-BOC', 'POS-MMM', 'POS-TWS', 'POS-BOC', 'BG-MMM', 'BG-TWS', 'BG-BOC', 'Google-MMM', 'Google-TWS', 'Google-BOC']
             
 
 
@@ -251,11 +251,31 @@ def runClassificationTest(X, y, model, featureset):
         C = 447
         Lc = 10
         gamma = 0.003
-    if featureset == 10: #Quadgram ONLY tfidf word Features
-        C = 32840
+    if featureset == 10: #Bigram ONLY binary word Features
+        C = 10
         Lc = 10
-        gamma = 0.186
-        
+        gamma = 0.21544346900318845
+    if featureset == 11: #Bigram ONLY tfidf word Features
+        C = 100000
+        Lc = 1
+        gamma = 0.21544346900318845
+    if featureset == 12: #Triigram ONLY binary word Features
+        C = 10
+        Lc = 10
+        gamma = 0.77426368268112777
+    if featureset == 13: #Triigram ONLY tfidf word Features
+        C = 1000
+        Lc = 10
+        gamma = 0.77426368268112777
+    if featureset == 14: #Quadgram ONLY binary word Features
+        C = 10
+        Lc = 10
+        gamma = 0.77426368268112777
+    if featureset == 15: #Quadgram ONLY tfidf word Features
+        C = 1000000
+        Lc = 10
+        gamma = 0.059948425031894091
+    '''
         
     if featureset == 11: #sentence MMM Features
         C = 7524
@@ -301,7 +321,10 @@ def runClassificationTest(X, y, model, featureset):
         C = 32598
         Lc = 1000
         gamma = 0.664
+     '''
         
+        
+           
     if model == 1:
         print "\nSVC\n"
         clf = svc_fit(X, y, kernel=kernel, C=C, gamma=gamma)
@@ -376,12 +399,11 @@ def test(X, y):
 reg = False
 scale = True
 valueV = 3
-featureV = 10
-perc = 20
+featureV = 2
   
 if __name__ == '__main__':
     
-    
+    perc = 20
     
     
     y = load_numpy_matrix(feature_set_path +  r'valueVector.npy')[:,valueV]
@@ -410,9 +432,19 @@ if __name__ == '__main__':
     elif featureV == 9:
         X = load_sparse_csr(feature_set_path +  r'quadgramTfidfWordData.npz')  
     elif featureV == 10:
+        X = load_sparse_csr(feature_set_path +  r'bigramOnlyBinaryWordData.npz') 
+    elif featureV == 11:
+        X = load_sparse_csr(feature_set_path +  r'bigramOnlyTfidfWordData.npz') 
+    elif featureV == 12:
+        X = load_sparse_csr(feature_set_path +  r'trigramOnlyBinaryWordData.npz') 
+    elif featureV == 13:
+        X = load_sparse_csr(feature_set_path +  r'trigramOnlyTfidfWordData.npz') 
+    elif featureV == 14:
+        X = load_sparse_csr(feature_set_path +  r'quadgramOnlyBinaryWordData.npz')  
+    elif featureV == 15:
         X = load_sparse_csr(feature_set_path +  r'quadgramOnlyTfidfWordData.npz') 
          
-        
+        '''
     elif featureV == 11:
         X = load_numpy_matrix(feature_set_path +  r'sentence_model_MinMaxMeanFeatures.npy')  
     elif featureV == 11:
@@ -435,7 +467,7 @@ if __name__ == '__main__':
         X = load_numpy_matrix(feature_set_path +  r'google_model_MinMaxMeanFeatures.npy')      
     elif featureV == 20:
         X = load_numpy_matrix(feature_set_path +  r'google_model_TfidfWeightedSumFeatures.npy')  
-    
+    '''
     
     
    # test(Xn, yn)   
@@ -448,7 +480,8 @@ if __name__ == '__main__':
     '''
         
     # FEATURE SELECT
-    X = SelectPercentile(score_func=chi2, percentile=perc).fit_transform(X,y) 
+    #X = SelectPercentile(score_func=chi2, percentile=perc).fit_transform(X,y) 
+    X = SelectKBest(score_func=chi2, k=min(100000, int(0.5*X.shape[1]))).fit_transform(X,y) 
     
     # GET TEST SET
     sss = cross_validation.StratifiedShuffleSplit(y, n_iter=1, test_size=0.75, random_state=42)
@@ -462,18 +495,19 @@ if __name__ == '__main__':
     print 'Total:', Xn.shape[0] + Xt.shape[0]
     print 'Number of features:', Xn.shape[1], '\n'
     
-    print "\n","Values",VALUES[valueV],'\n'
-    print "\n","Features",FEATURES[featureV],'\n'
+    print "\n","Values",VALUES[valueV]
+    print "\n","Features",FEATURES[featureV]
     print "Class distribution %.3f" %(np.sum(yn)/Xn.shape[0])
-    print np.sum(yn)
     
     
     # FEATURE SCALING
+    '''
     if featureV > 0:
         Xn, Xt = normalize_sets_sparse(Xn, Xt)
     else:
         Xn, Xt = normalize_sets_dense(Xn, Xt)
-    
+    '''
+    #Xn = preprocessing.normalize(Xn, axis=0, copy=False)
     
     
       
@@ -492,8 +526,9 @@ if __name__ == '__main__':
     else:
         print "\nCLASSIFICATION\n"
         print "Nr Of Features", Xn.shape[1]
-        print "Nr Of test Rows", Xn.shape[0]/3
-        for m in [2]:
+        print "Nr Of train Rows", Xn.shape[0]
+        print "Nr Of test Rows", Xt.shape[0]
+        for m in [1,2]:
             print "STARTING CLASSIFICATION"
             clf = runClassificationTest(Xn, yn, m, featureV)
             
@@ -504,7 +539,7 @@ if __name__ == '__main__':
             print "F1 Score %0.3f " % (f1_score(yt, clf.predict(Xt)))
             #print cross_validation.cross_val_score(clf, Xn, yn, scoring=f1_score)
     
-            #print draw_confusion_matrix(yt, clf.predict(Xt), [0,1])
+            print draw_confusion_matrix(yt, clf.predict(Xt), [0,1])
         
     
     

@@ -5,10 +5,10 @@ from scipy.sparse.csr import csr_matrix
 from sklearn import cross_validation, preprocessing
 from sklearn.cross_validation import train_test_split, StratifiedShuffleSplit
 from sklearn.feature_selection.univariate_selection import SelectPercentile,\
-    chi2, f_classif
+    chi2, f_classif, SelectKBest
 from sklearn.grid_search import GridSearchCV, RandomizedSearchCV
 from sklearn.metrics.metrics import classification_report
-from sklearn.svm.classes import SVC
+from sklearn.svm.classes import SVC, LinearSVC
 
 from FeatureExtraction.main import load_numpy_matrix, load_sparse_csr
 from RatingPrediction.main import valueV, runClassificationTest
@@ -32,6 +32,12 @@ yn = load_numpy_matrix(feature_set_path+ 'valueVector.npy')[:,valueV]
 #Xn = load_sparse_csr(feature_set_path+ 'trigramTfidfWordData.npz')
 #Xn = load_sparse_csr(feature_set_path+ 'quadgramBinaryWordData.npz')
 #Xn = load_sparse_csr(feature_set_path+ 'quadgramTfidfWordData.npz')
+
+#Xn = load_sparse_csr(feature_set_path+ 'bigramOnlyBinaryWordData.npz')
+#Xn = load_sparse_csr(feature_set_path+ 'bigramOnlyTfidfWordData.npz')
+#Xn = load_sparse_csr(feature_set_path+ 'trigramOnlyBinaryWordData.npz')
+#Xn = load_sparse_csr(feature_set_path+ 'trigramOnlyTfidfWordData.npz')
+#Xn = load_sparse_csr(feature_set_path+ 'quadgramOnlyBinaryWordData.npz')
 Xn = load_sparse_csr(feature_set_path+ 'quadgramOnlyTfidfWordData.npz')
 
 #Xn = load_numpy_matrix(feature_set_path+ 'POS_model_MinMaxMeanFeatures.npy')
@@ -56,8 +62,8 @@ Xn = load_sparse_csr(feature_set_path+ 'quadgramOnlyTfidfWordData.npz')
 print Xn.shape
 
 # FEATURE SELECTION
-Xn = SelectPercentile(score_func=chi2, percentile=perc).fit_transform(Xn,yn) 
-
+#Xn = SelectPercentile(score_func=chi2, percentile=perc).fit_transform(Xn,yn) 
+Xn = SelectKBest(score_func=chi2, k=min(100000, int(perc*Xn.shape[1]))).fit_transform(Xn,yn) 
 
 
 
@@ -80,22 +86,21 @@ elif scale == 2:
 
 
 
-tuned_parameters = [{'kernel': ['rbf'], 'C': [0.1, 10, 100, 1000, 10000, 100000, 1000000],
-                     'gamma': [0.001, 0.005, 0.01, 0.05, 0.1, 0.5]},
-                    {'kernel': ['linear'], 'C': [0.001, 0.1, 10, 1000, 10000]}]
+tuned_parameters = [{'kernel': ['rbf'], 'C': np.logspace(-1, 8, 10),
+                     'gamma': np.logspace(-4, 1, 10)}]
 
+linear_parameters = [{'kernel': ['linear'], 'C': np.logspace(-3, 6, 10)}]
 
-params = {'kernel': ['rbf'], 'C': scipy.stats.expon(scale=100000),
+params = {'kernel': ['rbf'], 'C': scipy.stats.expon(scale=1000000),
                      'gamma': scipy.stats.expon(scale=0.1)}
 
-linear_params = {'kernel': ['linear'], 'C': [0.1, 0.5, 1, 5, 10, 100, 1000, 10000, 1000000]}
 
 print("# Tuning hyper-parameters for %s" % 'F1-score')
 print
 
-cv = cross_validation.StratifiedKFold(yn,shuffle=True, n_folds=5, random_state=42)
-#clf = GridSearchCV(estimator=SVC(C=1, cache_size=1000, class_weight='auto'),param_grid=tuned_parameters, cv=cv, scoring='f1').fit(Xn, yn)
-clf = RandomizedSearchCV(estimator=SVC(C=1, cache_size=1000, class_weight='auto'), param_distributions=params, n_iter=50, cv=cv, scoring='f1').fit(Xn, yn)
+cv = cross_validation.StratifiedKFold(yn,shuffle=True, n_folds=3, random_state=42)
+clf = GridSearchCV(estimator=SVC(C=1, cache_size=1000, class_weight='auto'),param_grid=tuned_parameters, cv=cv, scoring='f1').fit(Xn, yn)
+#clf = RandomizedSearchCV(estimator=SVC(C=1, cache_size=1000, class_weight='auto'), param_distributions=params, n_iter=50, cv=cv, scoring='f1').fit(Xn, yn)
 
 print("Best parameters set found on development set:")
 print
@@ -109,7 +114,7 @@ for params, mean_score, scores in clf.grid_scores_:
           % (mean_score, scores.std() / 2, params))
 print
 
-clf = GridSearchCV(estimator=SVC(C=1, cache_size=1000, class_weight='auto'),param_grid=linear_params, cv=cv, scoring='f1').fit(Xn, yn)
+clf = GridSearchCV(estimator=SVC(C=1, cache_size=1000, class_weight='auto'),param_grid=linear_parameters, cv=cv, scoring='f1').fit(Xn, yn)
 
 print("Best parameters set found on development set:")
 print
@@ -122,4 +127,3 @@ for params, mean_score, scores in clf.grid_scores_:
     print("%0.3f (+/-%0.03f) for %r"
           % (mean_score, scores.std() / 2, params))
 print
-

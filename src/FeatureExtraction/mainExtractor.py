@@ -593,7 +593,14 @@ def extract_words(commentList, commentCount):
     trigram_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(1,3), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
     quadgram_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(1,4), max_df=0.5, binary=True, dtype=float)
     quadgram_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(1,4), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
-    quadgram_only_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(4,4), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
+    
+    
+    bigram_only_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(2,2), max_df=0.5, binary=True, dtype=float)
+    trigram_only_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(3,3), max_df=0.5, binary=True, dtype=float)
+    quadgram_only_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(4,4), max_df=0.5, binary=True, dtype=float)
+    bigram_only_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(2,2), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
+    trigram_only_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(3,3), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
+    quadgram_only_tfidf_count_vect =TfidfVectorizer(analyzer='word', ngram_range=(4,4), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
     
     
     
@@ -611,6 +618,11 @@ def extract_words(commentList, commentCount):
     quadgram_binary_count_vect = quadgram_binary_count_vect.fit_transform(processed_comment_list)
     quadgram_tfidf_count_vect = quadgram_tfidf_count_vect.fit_transform(processed_comment_list)
                 
+    bigram_only_binary_count_vect = bigram_only_binary_count_vect.fit_transform(processed_comment_list)
+    trigram_only_binary_count_vect = trigram_only_binary_count_vect.fit_transform(processed_comment_list)
+    quadgram_only_binary_count_vect = quadgram_only_binary_count_vect.fit_transform(processed_comment_list)
+    bigram_only_tfidf_count_vect = bigram_only_tfidf_count_vect.fit_transform(processed_comment_list)
+    trigram_only_tfidf_count_vect = trigram_only_tfidf_count_vect.fit_transform(processed_comment_list)
     quadgram_only_tfidf_count_vect = quadgram_only_tfidf_count_vect.fit_transform(processed_comment_list)
     
     print binary_count_vect.vocabulary_
@@ -623,9 +635,21 @@ def extract_words(commentList, commentCount):
     print trigram_tfidf_word_features.shape
     print quadgram_binary_count_vect.shape
     print quadgram_tfidf_count_vect.shape
+    
+    print bigram_only_binary_count_vect.shape
+    print trigram_only_binary_count_vect.shape
+    print quadgram_only_binary_count_vect.shape
+    print bigram_only_tfidf_count_vect.shape
+    print trigram_only_tfidf_count_vect.shape
     print quadgram_only_tfidf_count_vect.shape
     
-    return binary_word_features, frequency_word_features, tfidf_word_features, bigram_binary_count_vect,  bigram_tfidf_word_features, trigram_binary_count_vect, trigram_tfidf_word_features, quadgram_binary_count_vect,quadgram_tfidf_count_vect, quadgram_only_tfidf_count_vect 
+    return binary_word_features, frequency_word_features, tfidf_word_features, \
+            bigram_binary_count_vect,  bigram_tfidf_word_features, \
+            trigram_binary_count_vect, trigram_tfidf_word_features,\
+             quadgram_binary_count_vect,quadgram_tfidf_count_vect, \
+             bigram_only_binary_count_vect, bigram_only_tfidf_count_vect, \
+             trigram_only_binary_count_vect, trigram_only_tfidf_count_vect, \
+             quadgram_only_binary_count_vect, quadgram_only_tfidf_count_vect
 
 
 def extract_word_clusters(commentList, commentCount):
