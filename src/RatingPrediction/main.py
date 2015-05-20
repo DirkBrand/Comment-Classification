@@ -216,25 +216,25 @@ def runClassificationTest(X, y, model, featureset):
         Lc = 1000000
         gamma = 0.299
     if featureset == 1: #Binary word Features
-        C = 841
-        Lc = 5
-        gamma = 0.056   
+        C = 100
+        Lc = 1
+        gamma = 0.016681005372000592
     if featureset == 2: #Freq Word Features
         C = 6294
         Lc = 5
         gamma = 0.0001            
     if featureset == 3: #TFIDF word Features
-        C = 4643
-        Lc = 10
-        gamma = 0.001
+        C =10
+        Lc = 1
+        gamma = 0.059948425031894091
     if featureset == 4: #Bigram binary word Features
-        C = 5391
-        Lc = 1
-        gamma = 0.072 
+        C = 1
+        Lc = 10
+        gamma = 0.21544346900318845
     if featureset == 5: #Bigram tfidf word Features
-        C = 591
-        Lc = 1
-        gamma = 0.011
+        C = 1
+        Lc = 10
+        gamma = 1.9306977288832496
     if featureset == 6: #Trigram binary word Features
         C = 610
         Lc = 1
@@ -399,7 +399,7 @@ def test(X, y):
 reg = False
 scale = True
 valueV = 3
-featureV = 2
+featureV = 8
   
 if __name__ == '__main__':
     
@@ -472,16 +472,14 @@ if __name__ == '__main__':
     
    # test(Xn, yn)   
         
+    print 'Total:', X.shape[0] 
+    print 'Number of features:', X.shape[1], '\n'
     
     # Reduce Dataset
     '''
     factor1 = 1
     X_orig = X_orig[:X_orig.shape[0]/factor1,:]
     '''
-        
-    # FEATURE SELECT
-    #X = SelectPercentile(score_func=chi2, percentile=perc).fit_transform(X,y) 
-    X = SelectKBest(score_func=chi2, k=min(100000, int(0.5*X.shape[1]))).fit_transform(X,y) 
     
     # GET TEST SET
     sss = cross_validation.StratifiedShuffleSplit(y, n_iter=1, test_size=0.75, random_state=42)
@@ -490,10 +488,13 @@ if __name__ == '__main__':
         Xn , yn = X[train], y[train]
     
     
+        
+    # FEATURE SELECT
+    #X = SelectPercentile(score_func=chi2, percentile=perc).fit_transform(X,y) 
+    selector = SelectKBest(score_func=chi2, k=min(100000, int(0.5*Xn.shape[1]))).fit(Xn)
+    Xn = selector.transform(Xn, yn)
+    Xt = selector.transform(Xt, yt)
     
-    print 'Number of training rows:', Xn.shape[0], "| number of test rows:", Xt.shape[0]
-    print 'Total:', Xn.shape[0] + Xt.shape[0]
-    print 'Number of features:', Xn.shape[1], '\n'
     
     print "\n","Values",VALUES[valueV]
     print "\n","Features",FEATURES[featureV]

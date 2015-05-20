@@ -23,22 +23,24 @@ yn = load_numpy_matrix(feature_set_path+ 'valueVector.npy')[:,valueV]
 #yn = load_numpy_matrix(feature_set_path+ 'sentenceValueVector.npy')[:,valueV]
 
 #Xn = np.hstack((load_numpy_matrix(feature_set_path+ 'featureArray.npy'),load_numpy_matrix(feature_set_path+ 'socialVector.npy') ))
-#Xn = load_sparse_csr(feature_set_path+ 'binaryWordData.npz') 
-#Xn = load_sparse_csr(feature_set_path+ 'freqWordData.npz')  
-#Xn = load_sparse_csr(feature_set_path+ 'tfidfWordData.npz') 
-#Xn = load_sparse_csr(feature_set_path+ 'bigramBinaryWordData.npz')
-#Xn = load_sparse_csr(feature_set_path+ 'bigramTfidfWordData.npz')
-#Xn = load_sparse_csr(feature_set_path+ 'trigramBinaryWordData.npz')
-#Xn = load_sparse_csr(feature_set_path+ 'trigramTfidfWordData.npz')
-#Xn = load_sparse_csr(feature_set_path+ 'quadgramBinaryWordData.npz')
-#Xn = load_sparse_csr(feature_set_path+ 'quadgramTfidfWordData.npz')
+#filepath = feature_set_path+ 'binaryWordData.npz'
+#filepath = feature_set_path+ 'freqWordData.npz'
+#filepath = feature_set_path+ 'tfidfWordData.npz'
+#filepath = feature_set_path+ 'bigramBinaryWordData.npz'
+#filepath = feature_set_path+ 'bigramTfidfWordData.npz'
+filepath = feature_set_path+ 'trigramBinaryWordData.npz'
+#filepath = feature_set_path+ 'trigramTfidfWordData.npz'
+#filepath = feature_set_path+ 'quadgramBinaryWordData.npz'
+#filepath = feature_set_path+ 'quadgramTfidfWordData.npz'
 
-#Xn = load_sparse_csr(feature_set_path+ 'bigramOnlyBinaryWordData.npz')
-#Xn = load_sparse_csr(feature_set_path+ 'bigramOnlyTfidfWordData.npz')
-#Xn = load_sparse_csr(feature_set_path+ 'trigramOnlyBinaryWordData.npz')
-#Xn = load_sparse_csr(feature_set_path+ 'trigramOnlyTfidfWordData.npz')
-#Xn = load_sparse_csr(feature_set_path+ 'quadgramOnlyBinaryWordData.npz')
-Xn = load_sparse_csr(feature_set_path+ 'quadgramOnlyTfidfWordData.npz')
+#filepath = feature_set_path+ 'bigramOnlyBinaryWordData.npz'
+#filepath = feature_set_path+ 'bigramOnlyTfidfWordData.npz'
+#filepath = feature_set_path+ 'trigramOnlyBinaryWordData.npz'
+#filepath = feature_set_path+ 'trigramOnlyTfidfWordData.npz'
+#filepath = feature_set_path+ 'quadgramOnlyBinaryWordData.npz'
+#filepath = feature_set_path+ 'quadgramOnlyTfidfWordData.npz'
+
+Xn = load_sparse_csr(filepath)
 
 #Xn = load_numpy_matrix(feature_set_path+ 'POS_model_MinMaxMeanFeatures.npy')
 #Xn = load_numpy_matrix(feature_set_path+ 'POS_model_TfidfWeightedSumFeatures.npy')
@@ -58,7 +60,7 @@ Xn = load_sparse_csr(feature_set_path+ 'quadgramOnlyTfidfWordData.npz')
 #Xn = load_numpy_matrix(feature_set_path+ 'google_model_BagOfCentroidsFeatures.npy')
 
 
-
+print filepath
 print Xn.shape
 
 # FEATURE SELECTION
@@ -77,17 +79,18 @@ print yn.shape
 
 
 # FEATURE SCALING
+'''
 if scale == 1:
     Xn = preprocessing.normalize(Xn, axis=0, copy=False)
 elif scale == 2:
     Xn = preprocessing.normalize(Xn, copy=False)
     
+'''
 
 
 
-
-tuned_parameters = [{'kernel': ['rbf'], 'C': np.logspace(-1, 8, 10),
-                     'gamma': np.logspace(-4, 1, 10)}]
+tuned_parameters = [{'kernel': ['rbf'], 'C': np.logspace(0, 7, 8),
+                     'gamma': np.logspace(-4, 1, 8)}]
 
 linear_parameters = [{'kernel': ['linear'], 'C': np.logspace(-3, 6, 10)}]
 
