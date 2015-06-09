@@ -221,7 +221,7 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
     # Sentiment Classifier
     clf = load_classifier(sentiment_path + 'sentiment_classifier.pickle')
     
-    featureMatrix = np.empty([commentCount,30])
+    featureMatrix = np.empty([commentCount,23])
     
     
     index = 0
@@ -311,7 +311,7 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
             pronouns = getPN(pf)
                        
                 
-            threadRelevance = onSubForumTopic(tokens, cnt.keys())
+            #threadRelevance = onSubForumTopic(tokens, cnt.keys())
             articleRelevance = onSubForumTopic(tokens, articleCnt.keys())
             
             
@@ -321,7 +321,7 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
             badWordsPerc = float(badWords) / len(uniqueWords)
             complexity = entropy(comm.body, theWords)
             readibility = F_K_score(comm.body, sentences)
-            informativeness = tf_idf(text, theWords, commList)
+            #informativeness = tf_idf(text, theWords, commList)
             meantermFreq = avgTermFreq(text, theWords)
             #termFreq = 0
             
@@ -348,7 +348,7 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
             if timePassing < 0 or timely < 0:
                 timePassing = 0
                 timely = 0
-                
+                '''
             # Community features
             likes = comm.likeCount 
             dislikes = comm.dislikeCount
@@ -362,7 +362,7 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
                 
                 
             ratio = (comm.likeCount + 1) / (float(comm.likeCount+comm.dislikeCount + 2))
-            
+            '''
             #printValues(comm.author, comm.likeCount, comm.dislikeCount, (comm.likeCount+correction) / (comm.dislikeCount+comm.likeCount+2*correction), commLen, qf, ef, cf, nf, vf, spelled, badWords, complexity, readibility, termFreq, sentiment)
             
             featureMatrix[index] = np.array([timely, #19
@@ -383,18 +383,18 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
                                              badWords, #7
                                              badWordsPerc, #8
                                              meantermFreq, #12
-                                             informativeness, #23
+                                             #informativeness, #23
                                              readibility, #11
-                                             threadRelevance, #17
+                                             #threadRelevance, #17
                                              articleRelevance, #18
                                              sentiment, #13
                                              subj_obj, #14
                                              polarity_overlap, #22
-                                             likes,
-                                             dislikes,
-                                             ratio,
-                                             reports,
-                                             engagement
+                                             #likes,
+                                             #dislikes,
+                                             #ratio,
+                                             #reports,
+                                             #engagement
                                              ], float) #25
             index += 1
             if index % 100 == 0:
@@ -481,12 +481,8 @@ def extract_social_features(userList, articleList, commentCount):
 
 
 
-def extract_global_bag_of_words(commentList, synsets_also=False):
-    corpus = []
-    
-    synset_corpus = []
-    
-    global_synset_set = set()    
+def extract_global_bag_of_words(commentList):
+    corpus = []   
     
     lemmatizer = WordNetLemmatizer()    
     tb = Blobber(pos_tagger=PerceptronTagger())
@@ -504,29 +500,13 @@ def extract_global_bag_of_words(commentList, synsets_also=False):
             # Lemmatize
             filtered_words = [lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
                 
-            filtered_synsets = []
-            if synsets_also:
-                for w in filtered_words:
-                    syns = wn.synsets(w)
-                    for s in syns:
-                        if not s.pos() == wn.NOUN and not s.pos() == wn.VERB:
-                            continue
-                        global_synset_set.add(s)
-                        filtered_synsets.append(s)
-            
-            synset_corpus.append(filtered_synsets)
             corpus.append(' '.join(filtered_words))
             i += 1
             if i % 1000 == 0:
                 print i, "lemmatized"
                 
-        
-        if i % 1000 == 0:
-            pass
-        
-    print 'Extracted', len(global_synset_set), 'synsets'
             
-    return corpus, synset_corpus, global_synset_set
+    return corpus
 
 def process_text(commentList):
     """ Tokenize text and stem words removing punctuation """
@@ -581,75 +561,19 @@ def extract_global_bag_of_synsets(commentList):
             
     return global_synset_set, corpus
     
-def extract_words(commentList, commentCount):    
-    processed_comment_list, a, b = extract_global_bag_of_words(commentList)
+       
+def extract_words(vectorizer, train_list, test_list): 
+    count_vect= vectorizer.fit(train_list)
+    train = count_vect.transform(train_list)
+    test = count_vect.transform(test_list)
     
-    binary_count_vect = CountVectorizer(analyzer='word', max_df=0.5, binary=True, dtype=float)
-    freq_count_vect = CountVectorizer(analyzer='word', max_df=0.5, dtype=float)
-    tfidf_count_vect = TfidfVectorizer(analyzer='word', max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
-    bigram_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(1,2), max_df=0.5, binary=True, dtype=float)
-    bigram_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(1,2), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
-    trigram_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(1,3), max_df=0.5, binary=True, dtype=float)
-    trigram_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(1,3), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
-    quadgram_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(1,4), max_df=0.5, binary=True, dtype=float)
-    quadgram_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(1,4), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
+    #print count_vect.get_feature_names()
+    print "Train:", train.shape    
+    print "Test:", test.shape  
+    print  
     
-    
-    bigram_only_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(2,2), max_df=0.5, binary=True, dtype=float)
-    trigram_only_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(3,3), max_df=0.5, binary=True, dtype=float)
-    quadgram_only_binary_count_vect = CountVectorizer(analyzer='word', ngram_range=(4,4), max_df=0.5, binary=True, dtype=float)
-    bigram_only_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(2,2), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
-    trigram_only_tfidf_count_vect = TfidfVectorizer(analyzer='word', ngram_range=(3,3), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
-    quadgram_only_tfidf_count_vect =TfidfVectorizer(analyzer='word', ngram_range=(4,4), max_df=0.5, use_idf=True, smooth_idf=True, dtype=float)
-    
-    
-    
-    
-    binary_word_features = binary_count_vect.fit_transform(processed_comment_list)
-    frequency_word_features = freq_count_vect.fit_transform(processed_comment_list)
-    tfidf_word_features = tfidf_count_vect.fit_transform(processed_comment_list)
-    
-    bigram_binary_count_vect = bigram_binary_count_vect.fit_transform(processed_comment_list)
-    bigram_tfidf_word_features = bigram_tfidf_count_vect.fit_transform(processed_comment_list)
-    
-    trigram_binary_count_vect = trigram_binary_count_vect.fit_transform(processed_comment_list)
-    trigram_tfidf_word_features = trigram_tfidf_count_vect.fit_transform(processed_comment_list)
-    
-    quadgram_binary_count_vect = quadgram_binary_count_vect.fit_transform(processed_comment_list)
-    quadgram_tfidf_count_vect = quadgram_tfidf_count_vect.fit_transform(processed_comment_list)
-                
-    bigram_only_binary_count_vect = bigram_only_binary_count_vect.fit_transform(processed_comment_list)
-    trigram_only_binary_count_vect = trigram_only_binary_count_vect.fit_transform(processed_comment_list)
-    quadgram_only_binary_count_vect = quadgram_only_binary_count_vect.fit_transform(processed_comment_list)
-    bigram_only_tfidf_count_vect = bigram_only_tfidf_count_vect.fit_transform(processed_comment_list)
-    trigram_only_tfidf_count_vect = trigram_only_tfidf_count_vect.fit_transform(processed_comment_list)
-    quadgram_only_tfidf_count_vect = quadgram_only_tfidf_count_vect.fit_transform(processed_comment_list)
-    
-    print binary_count_vect.vocabulary_
-    print binary_word_features.shape
-    print frequency_word_features.shape
-    print tfidf_word_features.shape
-    print bigram_binary_count_vect.shape
-    print bigram_tfidf_word_features.shape
-    print trigram_binary_count_vect.shape
-    print trigram_tfidf_word_features.shape
-    print quadgram_binary_count_vect.shape
-    print quadgram_tfidf_count_vect.shape
-    
-    print bigram_only_binary_count_vect.shape
-    print trigram_only_binary_count_vect.shape
-    print quadgram_only_binary_count_vect.shape
-    print bigram_only_tfidf_count_vect.shape
-    print trigram_only_tfidf_count_vect.shape
-    print quadgram_only_tfidf_count_vect.shape
-    
-    return binary_word_features, frequency_word_features, tfidf_word_features, \
-            bigram_binary_count_vect,  bigram_tfidf_word_features, \
-            trigram_binary_count_vect, trigram_tfidf_word_features,\
-             quadgram_binary_count_vect,quadgram_tfidf_count_vect, \
-             bigram_only_binary_count_vect, bigram_only_tfidf_count_vect, \
-             trigram_only_binary_count_vect, trigram_only_tfidf_count_vect, \
-             quadgram_only_binary_count_vect, quadgram_only_tfidf_count_vect
+    return train, test
+
 
 
 def extract_word_clusters(commentList, commentCount):
@@ -875,6 +799,8 @@ def read_comments(filename):
             unique_comments.add(body)
         '''
         
+        comm = CommentObject.CommentObject(C_id, CO_id, P_id, U_id, likes, dislikes, reported,status, date, author, body,lemma_body, pos_body)
+        
         '''
         if likes + dislikes == 0:
             continue
@@ -886,16 +812,15 @@ def read_comments(filename):
         
         if dislikes < VOTES_MIN:
             continue
-        
+        '''
         comm.setWords(words(comm.body))
         if len(comm.words) < WORD_MIN:
             continue
-        '''
+        
         
         if rating == 0 or rating == 4:
             continue
         
-        comm = CommentObject.CommentObject(C_id, CO_id, P_id, U_id, likes, dislikes, reported,status, date, author, body,lemma_body, pos_body)
         article = ArticleObject.ArticleObject(CO_id, articleTitle, articleSynopsis, "")
 
 
@@ -923,9 +848,8 @@ def read_comments(filename):
             CommentsList.pop(a[0])
             articleList.pop(a[0])
         else:
-            commentCount += len(a[1])
+            commentCount += len(a[1])    
     '''
-
     print "Saved",commentCount,"comments out of", totalCount
     
     return articleList, CommentsList, parentList, commentCount

@@ -16,29 +16,33 @@ from config import feature_set_path
 import numpy as np
 
 
-perc = 20
+perc = 50
 scale = 1
 
-yn = load_numpy_matrix(feature_set_path+ 'valueVector.npy')[:,valueV]
+yn = load_numpy_matrix(feature_set_path+ 'valueVector_train.npy')
 #yn = load_numpy_matrix(feature_set_path+ 'sentenceValueVector.npy')[:,valueV]
 
-#Xn = np.hstack((load_numpy_matrix(feature_set_path+ 'featureArray.npy'),load_numpy_matrix(feature_set_path+ 'socialVector.npy') ))
-#filepath = feature_set_path+ 'binaryWordData.npz'
-#filepath = feature_set_path+ 'freqWordData.npz'
-#filepath = feature_set_path+ 'tfidfWordData.npz'
-#filepath = feature_set_path+ 'bigramBinaryWordData.npz'
-#filepath = feature_set_path+ 'bigramTfidfWordData.npz'
-filepath = feature_set_path+ 'trigramBinaryWordData.npz'
-#filepath = feature_set_path+ 'trigramTfidfWordData.npz'
-#filepath = feature_set_path+ 'quadgramBinaryWordData.npz'
-#filepath = feature_set_path+ 'quadgramTfidfWordData.npz'
+#filepath = 'MANUAL'
+#print load_numpy_matrix(feature_set_path+ 'featureArray_train.npy').shape
+#print load_numpy_matrix(feature_set_path+ 'socialVector_train.npy').shape
+#Xn = np.hstack((load_numpy_matrix(feature_set_path+ 'featureArray_train.npy'),load_numpy_matrix(feature_set_path+ 'socialVector_train.npy') ))
 
-#filepath = feature_set_path+ 'bigramOnlyBinaryWordData.npz'
-#filepath = feature_set_path+ 'bigramOnlyTfidfWordData.npz'
-#filepath = feature_set_path+ 'trigramOnlyBinaryWordData.npz'
-#filepath = feature_set_path+ 'trigramOnlyTfidfWordData.npz'
-#filepath = feature_set_path+ 'quadgramOnlyBinaryWordData.npz'
-#filepath = feature_set_path+ 'quadgramOnlyTfidfWordData.npz'
+#filepath = feature_set_path+ 'binaryWordData_train.npz'
+#filepath = feature_set_path+ 'freqWordData_train.npz'
+#filepath = feature_set_path+ 'tfidfWordData_train.npz'
+#filepath = feature_set_path+ 'bigramBinaryWordData_train.npz'
+#filepath = feature_set_path+ 'bigramTfidfWordData_train.npz'
+#filepath = feature_set_path+ 'trigramBinaryWordData_train.npz'
+#filepath = feature_set_path+ 'trigramTfidfWordData_train.npz'
+#filepath = feature_set_path+ 'quadgramBinaryWordData_train.npz'
+#filepath = feature_set_path+ 'quadgramTfidfWordData_train.npz'
+
+#filepath = feature_set_path+ 'bigramOnlyBinaryWordData_train.npz'
+filepath = feature_set_path+ 'bigramOnlyTfidfWordData_train.npz'
+#filepath = feature_set_path+ 'trigramOnlyBinaryWordData_train.npz'
+#filepath = feature_set_path+ 'trigramOnlyTfidfWordData_train.npz'
+#filepath = feature_set_path+ 'quadgramOnlyBinaryWordData_train.npz'
+#filepath = feature_set_path+ 'quadgramOnlyTfidfWordData_train.npz'
 
 Xn = load_sparse_csr(filepath)
 
@@ -61,40 +65,42 @@ Xn = load_sparse_csr(filepath)
 
 
 print filepath
+
+sss = StratifiedShuffleSplit(yn, 1, test_size=0.75, random_state=0)
+for train, test in sss:
+    Xn , yn = Xn[train], yn[train]
+    
 print Xn.shape
 
 # FEATURE SELECTION
+#Xn = SelectPercentile(score_func=f_classif, percentile=perc).fit_transform(Xn,yn) 
 #Xn = SelectPercentile(score_func=chi2, percentile=perc).fit_transform(Xn,yn) 
-Xn = SelectKBest(score_func=chi2, k=min(100000, int(perc*Xn.shape[1]))).fit_transform(Xn,yn) 
+Xn = SelectKBest(score_func=chi2, k=min(100000, Xn.shape[1])).fit_transform(Xn,yn) 
 
 
-
-# SUBSET SELECTION
-sss = StratifiedShuffleSplit(yn, 1, test_size=0.90, random_state=0)
-for train, test in sss:
-    Xn , yn = Xn[train], yn[train]
 
 print Xn.shape
 print yn.shape
 
 
 # FEATURE SCALING
-'''
+
 if scale == 1:
     Xn = preprocessing.normalize(Xn, axis=0, copy=False)
 elif scale == 2:
     Xn = preprocessing.normalize(Xn, copy=False)
-    
-'''
+   
+   
 
 
 
-tuned_parameters = [{'kernel': ['rbf'], 'C': np.logspace(0, 7, 8),
+
+tuned_parameters = [{'kernel': ['rbf'], 'C': np.logspace(-1, 7, 9),
                      'gamma': np.logspace(-4, 1, 8)}]
 
-linear_parameters = [{'kernel': ['linear'], 'C': np.logspace(-3, 6, 10)}]
+linear_parameters = [{'kernel': ['linear'], 'C': np.logspace(-3, 4, 8)}]
 
-params = {'kernel': ['rbf'], 'C': scipy.stats.expon(scale=1000000),
+params = {'kernel': ['rbf'], 'C': scipy.stats.expon(scale=100000),
                      'gamma': scipy.stats.expon(scale=0.1)}
 
 
@@ -102,8 +108,8 @@ print("# Tuning hyper-parameters for %s" % 'F1-score')
 print
 
 cv = cross_validation.StratifiedKFold(yn,shuffle=True, n_folds=3, random_state=42)
-clf = GridSearchCV(estimator=SVC(C=1, cache_size=1000, class_weight='auto'),param_grid=tuned_parameters, cv=cv, scoring='f1').fit(Xn, yn)
-#clf = RandomizedSearchCV(estimator=SVC(C=1, cache_size=1000, class_weight='auto'), param_distributions=params, n_iter=50, cv=cv, scoring='f1').fit(Xn, yn)
+clf = GridSearchCV(estimator=SVC(C=1, cache_size=1000, class_weight='auto',verbose=True),param_grid=tuned_parameters, cv=cv, scoring='f1').fit(Xn, yn)
+#clf = RandomizedSearchCV(estimator=SVC(C=1, cache_size=1000, class_weight='auto',verbose=True), param_distributions=params, n_iter=50, cv=cv, scoring='f1').fit(Xn, yn)
 
 print("Best parameters set found on development set:")
 print

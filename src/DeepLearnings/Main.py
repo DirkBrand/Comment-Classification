@@ -11,11 +11,14 @@ from gensim.models import doc2vec
 from gensim.models.doc2vec import Doc2Vec, LabeledLineSentence
 from gensim.models.phrases import Phrases
 from gensim.models.word2vec import LineSentence, Word2Vec
+from matplotlib import offsetbox
 import nltk
 from nltk.corpus import stopwords
+from sklearn.manifold.t_sne import TSNE
 
 from RatingPrediction.Classification import draw_confusion_matrix
 from config import model_path, comment_data_path
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -32,6 +35,15 @@ downsampling = 1e-5   # Downsample setting for frequent words
 
 tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 stops = set(stopwords.words("english"))         
+
+cats = ['doorknob', 'chandelier', 'radio', 'motorcycle', 'keyboard', 'chair', 'blender', 'flashlight', 'dice', 'cup', 'fireplace',
+        'piano', 'hat', 'plate', 'handle', 'cannon', 'screwdriver', 'fan', 'desk', 'handgun', 'stapler', 'gun', 'locomotive', 'bicycle',
+        'globe', 'sign', 'turntable', 'computer', 'trombone', 'candle', 'hammer', 'hourglass', 'clock', 'harmonica', 'microwave', 'umbrella',
+         'mailbox', 'guitar', 'sink', 'key', 'anchor', 'pliers', 'headphones', 'skateboard', 'blimp', 'grenade', 'stoplight', 'drums', 'scissors',
+          'hydrant', 'submarine', 'synthesizer', 'camera', 'helicopter', 'fish', 'door', 'television', 'tank', 'skull', 'car', 'blade', 'tree',
+          'bed', 'banana', 'donut', 'cake', 'spotlight', 'toilet', 'lock', 'telephone', 'airplane', 'trumpet', 'tyrannosaurus', 'sailboat', 'chessboard',
+           'toaster', 'cross', 'couch', 'speaker', 'elephant', 'dresser', 'windmill', 'plant', 'ladder', 'remote', 'yacht', 'person', 'wrench', 'bottle', 'balloon']
+
 
         
 def comment_to_sentences( comment, tokenizer, stopwords = False):
@@ -87,8 +99,8 @@ def get_model(model_num):
     os.chdir(tempCWD)
     return model
 
-retrain = True
-model_type = 7
+retrain = False
+model_type = 99
 if __name__ == '__main__':
     if model_type == 1:
         iter = LineSentence(comment_data_path + 'comms_data.txt')
@@ -118,6 +130,7 @@ if __name__ == '__main__':
         iter = LabeledLineSentence(comment_data_path + 'comms_sentence_data.txt')
         model_name = "bigram_from_sentence_model_paragraph"
     
+    
     if retrain:
         print "Training model..."
         print model_name
@@ -143,9 +156,32 @@ if __name__ == '__main__':
         model.save(model_name)
     else:
         model = get_model(model_type)
-        
+    
+    embeddings = []
+    for cat in cats:
+        embeddings.append([float(v) for v in model[cat]])
     print model.syn0.shape    
-    model.accuracy('questions-words.txt')
+    
+    print embeddings
+    model_t = TSNE(n_components=2)
+    X = model_t.fit_transform(embeddings)
+    
+    
+    
+    x_min, x_max = np.min(X, 0), np.max(X, 0)
+    X = (X - x_min) / (x_max - x_min)
+
+    plt.figure()
+    ax = plt.subplot(111)
+    for i in range(X.shape[0]):
+        plt.text(X[i, 0], X[i, 1], cats[i],
+                 fontdict={'weight': 'bold', 'size': 9})
+
+  
+    plt.xticks([]), plt.yticks([])
+    plt.title('TSNE')
+    plt.show()
+    #model.accuracy('questions-words.txt')
     
     
     

@@ -4,34 +4,36 @@ Created on 13 Apr 2015
 @author: Dirk
 '''
 from nltk.tokenize import word_tokenize
-'''
+from scipy.sparse.csr import csr_matrix
+
+from RatingPrediction.main import normalize_sets_sparse
+import numpy as np
+from sklearn import preprocessing
+
+
 x_train = [[1.0, 5.0, 1.0],
-                    [2.0, 6.0, 2.0]]
+            [2.0, 6.0, 2.0]]
 x_test = [[0.0, 5.0,  1.0],
-                   [2.0, 10.0, 1.0]]
+            [2.0, 10.0, 1.0]]
 
 train = csr_matrix(x_train)
 test = csr_matrix(x_test)
 
-norm = train.copy()
-norm.data **= 2 # Square every value
-norm = norm.sum(axis=0) # Sum every column
-n_nonzeros = np.where(norm > 0)
-norm[n_nonzeros] = 1.0 / np.sqrt(norm[n_nonzeros])
-norm = np.array(norm).T[0]
 
-print norm1
+
+train1, test1 = normalize_sets_sparse(train, test)
+print train1.todense()
 print
-print normalized(x_train,norm1)
-print
-print normalized(x_test,norm1)
+print test1.todense()
 print
 
-sparsetools.csr_scale_columns(train.shape[0], train.shape[1], train.indptr, train.indices, train.data, norm)
-print train.todense()
-sparsetools.csr_scale_columns(test.shape[0], test.shape[1], test.indptr, test.indices, test.data, norm)
-print test.todense()
-'''
+
+
+train2 = preprocessing.normalize(train, axis=0)
+print train2.todense()
+print
+print
+
 '''
 puncts = set(string.punctuation)
 lemmatizer = WordNetLemmatizer()
@@ -58,6 +60,7 @@ for sentence in sent_detector.tokenize(sentences.strip()):
         print dbdomains.get('0' + str(w[2].offset))
 '''
 
+'''
 import anydbm
 import collections
 from math import sqrt
@@ -216,3 +219,4 @@ def write_csv(name, cats, dict):
  
 
 #write_csv("similarities", cats + verbs, similarity_dict)
+'''

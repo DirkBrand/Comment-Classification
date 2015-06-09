@@ -9,19 +9,22 @@ import pickle
 import nltk
 from nltk.stem.snowball import SnowballStemmer
 from scipy.sparse.csr import csr_matrix
-from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer
+from sklearn.cross_validation import StratifiedShuffleSplit
+from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer,\
+    CountVectorizer
 from sklearn.linear_model.stochastic_gradient import SGDRegressor
 
-from DeepLearnings.FeatureExtraction import min_max_mean_features,\
+from DeepLearnings.FeatureExtraction import min_max_mean_features, \
     tfidf_weighted_sum_features, bag_of_centroids_features, getCommentCount
 from DeepLearnings.Main import get_model
-from FeatureExtraction.SentimentUtil import create_classifier, make_full_dict,\
-    create_word_scores, find_best_words, evaluate_features, best_word_features,\
+from FeatureExtraction.SentimentUtil import create_classifier, make_full_dict, \
+    create_word_scores, find_best_words, evaluate_features, best_word_features, \
     extract_features
-from FeatureExtraction.mainExtractor import read_comments, extract_values, extract_feature_matrix,\
-    extract_Time_Data, extract_words,  read_user_comments,\
-    extract_user_values,  read_user_data,\
-    extract_social_features, extract_sentence_values, extract_word_clusters
+from FeatureExtraction.mainExtractor import read_comments, extract_values, extract_feature_matrix, \
+    extract_Time_Data, read_user_comments, \
+    extract_user_values, read_user_data, \
+    extract_social_features, extract_sentence_values, extract_word_clusters, \
+    extract_global_bag_of_words, extract_words
 from config import sentiment_path, feature_set_path, comment_data_path
 import numpy as np
 
@@ -49,50 +52,133 @@ def setup():
     evaluate_features(best_word_features, best_words)
 
 
-def extractSaveFeatures(articleList, commentList, parentList,commentCount):
-    featureMatrix = extract_feature_matrix(articleList, commentList, parentList,commentCount)
+def extractSaveFeatures(articleList, commentList, parentList, commentCount):
+    featureMatrix = extract_feature_matrix(articleList, commentList, parentList, commentCount)
     print "Extracted Features"
-    save_numpy_matrix(feature_set_path + "featureArray",featureMatrix) 
     
-def extractSaveValues(articleList, commentList, parentList,commentCount):
-    valueVector = extract_values(articleList,commentList, parentList, commentCount)
+    train_v, test_v = np.load('train_vect.npy'), np.load('test_vect.npy')
+    train = []
+    test = []
+    train, test = featureMatrix[train_v], featureMatrix[test_v]
+    print train.shape
+    print test.shape
+    save_numpy_matrix(feature_set_path + "featureArray_train", train) 
+    save_numpy_matrix(feature_set_path + "featureArray_test", test) 
+    
+def extractSaveValues(articleList, commentList, parentList, commentCount):
+    valueVector = extract_values(articleList, commentList, parentList, commentCount)
     print "Extracted values"
-    save_numpy_matrix(feature_set_path + "valueVector",valueVector) 
+    save_numpy_matrix(feature_set_path + "valueVector", valueVector) 
     
     
-def extractSaveSentenceValues(articleList, commentList, parentList,commentCount):
-    valueVector = extract_sentence_values(articleList,commentList, parentList, getCommentCount(4, commentList))
+def extractSaveSentenceValues(articleList, commentList, parentList, commentCount):
+    valueVector = extract_sentence_values(articleList, commentList, parentList, getCommentCount(4, commentList))
     print "Extracted values"
-    save_numpy_matrix(feature_set_path + "sentenceValueVector",valueVector) 
+    save_numpy_matrix(feature_set_path + "sentenceValueVector", valueVector) 
 
 def extractSynsetData(articleList, commentList, commentCount):
     wd = extract_word_clusters(commentList, commentCount)
-    save_sparse_csr(feature_set_path + "clusteredWordData",wd) 
+    save_sparse_csr(feature_set_path + "clusteredWordData", wd) 
     
 def extractWordData(articleList, commentList, commentCount):
-    bwd, fwd, twd, bbwd, btwd, tbwd, ttwd, qbwd, qtwd, bowd, bowd2, towd, towd2,  qowd, qowd2  = extract_words(commentList, commentCount)
-    save_sparse_csr(feature_set_path + "binaryWordData",bwd) 
-    save_sparse_csr(feature_set_path + "freqWordData",fwd) 
-    save_sparse_csr(feature_set_path + "tfidfWordData",twd) 
-    save_sparse_csr(feature_set_path + "bigramBinaryWordData",bbwd) 
-    save_sparse_csr(feature_set_path + "bigramTfidfWordData",btwd) 
-    save_sparse_csr(feature_set_path + "trigramBinaryWordData",tbwd) 
-    save_sparse_csr(feature_set_path + "trigramTfidfWordData",ttwd) 
-    save_sparse_csr(feature_set_path + "quadgramBinaryWordData",qbwd) 
-    save_sparse_csr(feature_set_path + "quadgramTfidfWordData",qtwd)  
+    processed_comment_list = extract_global_bag_of_words(commentList)
     
-    save_sparse_csr(feature_set_path + "bigramOnlyBinaryWordData",bowd)
-    save_sparse_csr(feature_set_path + "bigramOnlyTfidfWordData",bowd2)
-    save_sparse_csr(feature_set_path + "trigramOnlyBinaryWordData",towd)
-    save_sparse_csr(feature_set_path + "trigramOnlyTfidfWordData",towd2)
-    save_sparse_csr(feature_set_path + "quadgramOnlyBinaryWordData",qowd) 
-    save_sparse_csr(feature_set_path + "quadgramOnlyTfidfWordData",qowd2) 
+    
+    train_v, test_v = np.load('train_vect.npy'), np.load('test_vect.npy')
+    train_list = []
+    test_list = []
+    for v in train_v:
+        train_list.append(processed_comment_list[v])
+    for v in test_v:
+        test_list.append(processed_comment_list[v])
+        
+        
+    
+    #train_list = [' '.join(sent) for sent in train_list]  
+    #test_list = [' '.join(sent) for sent in test_list]    
+
+    print len(train_list)
+    print len(test_list)
+    
+    print 'Unigram Binary'
+    bwd_train, bwd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(1,1), binary=True, dtype=float), train_list, test_list)
+    print 'Unigram Frequency'
+    fwd_train, fwd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(1,1), dtype=float), train_list, test_list)
+    print 'Unigram TFIDF'
+    twd_train, twd_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(1,1), use_idf=True, smooth_idf=True, dtype=float), train_list, test_list)
+    print 'Bigram Binary'
+    bbwd_train, bbwd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(1,2), binary=True, dtype=float),train_list, test_list)
+    print 'Bigram TFIDF'
+    btwd_train, btwd_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(1,2), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    print 'Trigram Binary'
+    tbwd_train, tbwd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(1,3), binary=True, dtype=float),train_list, test_list)
+    print 'Trigram TFIDF'
+    ttwd_train, ttwd_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(1,3), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    print 'Quadgram Binary'
+    qbwd_train, qbwd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(1,4), binary=True, dtype=float),train_list, test_list)
+    print 'Quadgram TFIDF'
+    qtwd_train, qtwd_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(1,4), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    print 'Bigram Only Binary'
+    bowd_train, bowd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(2,2), binary=True, dtype=float),train_list, test_list)
+    print 'Bigram Only TFIDF'
+    bowd2_train, bowd2_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(2,2), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    print 'Trigram Only Binary'
+    towd_train, towd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(3,3), binary=True, dtype=float),train_list, test_list)
+    print 'Trigram Only TFIDF'
+    towd2_train, towd2_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(3,3), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    print 'Quadgram Only Binary'
+    qowd_train, qowd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(4,4), binary=True, dtype=float),train_list, test_list)
+    print 'Quadgram Only TFIDF'
+    qowd2_train, qowd2_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(4,4), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    
+    save_sparse_csr(feature_set_path + "binaryWordData_train", bwd_train) 
+    save_sparse_csr(feature_set_path + "freqWordData_train", fwd_train) 
+    save_sparse_csr(feature_set_path + "tfidfWordData_train", twd_train) 
+    save_sparse_csr(feature_set_path + "bigramBinaryWordData_train", bbwd_train) 
+    save_sparse_csr(feature_set_path + "bigramTfidfWordData_train", btwd_train) 
+    save_sparse_csr(feature_set_path + "trigramBinaryWordData_train", tbwd_train) 
+    save_sparse_csr(feature_set_path + "trigramTfidfWordData_train", ttwd_train) 
+    save_sparse_csr(feature_set_path + "quadgramBinaryWordData_train", qbwd_train) 
+    save_sparse_csr(feature_set_path + "quadgramTfidfWordData_train", qtwd_train)  
+    
+    save_sparse_csr(feature_set_path + "bigramOnlyBinaryWordData_train", bowd_train)
+    save_sparse_csr(feature_set_path + "bigramOnlyTfidfWordData_train", bowd2_train)
+    save_sparse_csr(feature_set_path + "trigramOnlyBinaryWordData_train", towd_train)
+    save_sparse_csr(feature_set_path + "trigramOnlyTfidfWordData_train", towd2_train)
+    save_sparse_csr(feature_set_path + "quadgramOnlyBinaryWordData_train", qowd_train) 
+    save_sparse_csr(feature_set_path + "quadgramOnlyTfidfWordData_train", qowd2_train)     
+    
+    save_sparse_csr(feature_set_path + "binaryWordData_test", bwd_test) 
+    save_sparse_csr(feature_set_path + "freqWordData_test", fwd_test) 
+    save_sparse_csr(feature_set_path + "tfidfWordData_test", twd_test) 
+    save_sparse_csr(feature_set_path + "bigramBinaryWordData_test", bbwd_test) 
+    save_sparse_csr(feature_set_path + "bigramTfidfWordData_test", btwd_test) 
+    save_sparse_csr(feature_set_path + "trigramBinaryWordData_test", tbwd_test) 
+    save_sparse_csr(feature_set_path + "trigramTfidfWordData_test", ttwd_test) 
+    save_sparse_csr(feature_set_path + "quadgramBinaryWordData_test", qbwd_test) 
+    save_sparse_csr(feature_set_path + "quadgramTfidfWordData_test", qtwd_test)  
+    
+    save_sparse_csr(feature_set_path + "bigramOnlyBinaryWordData_test", bowd_test)
+    save_sparse_csr(feature_set_path + "bigramOnlyTfidfWordData_test", bowd2_test)
+    save_sparse_csr(feature_set_path + "trigramOnlyBinaryWordData_test", towd_test)
+    save_sparse_csr(feature_set_path + "trigramOnlyTfidfWordData_test", towd2_test)
+    save_sparse_csr(feature_set_path + "quadgramOnlyBinaryWordData_test", qowd_test) 
+    save_sparse_csr(feature_set_path + "quadgramOnlyTfidfWordData_test", qowd2_test) 
     
 def extractSocialData(articleList, commentList, commentCount):
     userList, userCount = read_user_data(comment_data_path + 'userdata.txt');
-    socialVector = extract_social_features(userList, commentList, commentCount)            
+    socialVector = extract_social_features(userList, commentList, commentCount) 
+    
+    train_v, test_v = np.load('train_vect.npy'), np.load('test_vect.npy')
+    train = []
+    test = []
+    train, test = socialVector[train_v], socialVector[test_v]
+    print train.shape
+    print test.shape
+               
     print "Extracted social Features"
-    save_numpy_matrix(feature_set_path + "socialVector",socialVector) 
+    save_numpy_matrix(feature_set_path + "socialVector_train", train) 
+    save_numpy_matrix(feature_set_path + "socialVector_test", test) 
     
 model_type = 5
 def extractSaveWordEmbeddingFeatures(commentList, commentCount): 
@@ -109,24 +195,24 @@ def extractSaveWordEmbeddingFeatures(commentList, commentCount):
     
     print "ONE"
     fs2 = tfidf_weighted_sum_features(model_type, commentList, commentCount)
-    save_numpy_matrix(feature_set_path + model_name + "_TfidfWeightedSumFeatures",fs2) 
+    save_numpy_matrix(feature_set_path + model_name + "_TfidfWeightedSumFeatures", fs2) 
     print "TWO"
     fs1 = min_max_mean_features(model_type, commentList, commentCount)    
-    save_numpy_matrix(feature_set_path + model_name + "_MinMaxMeanFeatures",fs1)
+    save_numpy_matrix(feature_set_path + model_name + "_MinMaxMeanFeatures", fs1)
     print "THREE"
     fs3 = bag_of_centroids_features(model_type, commentList, commentCount)
-    save_numpy_matrix(feature_set_path + model_name + "_BagOfCentroidsFeatures",fs3)  
+    save_numpy_matrix(feature_set_path + model_name + "_BagOfCentroidsFeatures", fs3)  
     print "Extracted Deep Learning Features"
  
 def extractTimeData(articleList, commentList, commentCount):
     td = extract_Time_Data(articleList, commentCount)
-    save_sparse_csr("timeData",td) 
+    save_sparse_csr("timeData", td) 
 
     
     
     
-def save_sparse_csr(filename,array):
-    np.savez(filename, data = array.data, indices=array.indices, indptr =array.indptr, shape=array.shape)
+def save_sparse_csr(filename, array):
+    np.savez(filename, data=array.data, indices=array.indices, indptr=array.indptr, shape=array.shape)
 
 def save_numpy_matrix(filename, array):
     np.save(filename, array)
@@ -136,9 +222,9 @@ def load_numpy_matrix(filename):
     
 def load_sparse_csr(filename):
     loader = np.load(filename)
-    return csr_matrix(( loader['data'], loader['indices'], loader['indptr']), shape = loader['shape'])
+    return csr_matrix((loader['data'], loader['indices'], loader['indptr']), shape=loader['shape'])
 
-def savePickledList(articleList,commentList,parentList):
+def savePickledList(articleList, commentList, parentList):
     f = open('articleList.pkl', 'wb')
     pickle.dump(articleList, f)
     f.close()
@@ -154,13 +240,13 @@ def loadPickledList():
     commentList = []
     parentList = []
 
-    f =  open("articleList" + '.pkl', 'rb')
+    f = open("articleList" + '.pkl', 'rb')
     artList = pickle.load(f)
     f.close()
-    f =  open("commentList" + '.pkl', 'rb')
+    f = open("commentList" + '.pkl', 'rb')
     artList = pickle.load(f)
     f.close()
-    f =  open("parentList" + '.pkl', 'rb')
+    f = open("parentList" + '.pkl', 'rb')
     parentList = pickle.load(f)
     f.close()
     
@@ -174,34 +260,51 @@ def loadPickledList():
 reLoad = True
 if __name__ == '__main__':
     print 'START'
-    #setup()
+    # setup()
          
     # To process all the comments
     if reLoad:
         articleList, commentList, parentList, commentCount = read_comments(comment_data_path + 'trainTestDataSet.txt')
-        #savePickledList(articleList, commentList, parentList)
+        # savePickledList(articleList, commentList, parentList)
     else:
         articleList, commentList, parentList, commentCount = loadPickledList()
         
     print "Processed", commentCount, "Comments"
-      
+    
+    
+    
+    extractSaveValues(articleList, commentList, parentList, commentCount)
+    y = load_numpy_matrix(feature_set_path + r'valueVector.npy')[:, 3]   
+    sss = StratifiedShuffleSplit(y, 1, test_size=0.40, random_state=42)
+    for train, test in sss:
+        print train
+        np.save('train_vect', train)
+        np.save('test_vect', test)
+        y_train = y[train]
+        y_test = y[test]
+    save_numpy_matrix(feature_set_path + "valueVector_train", y_train) 
+    save_numpy_matrix(feature_set_path + "valueVector_test", y_test) 
+    
+    '''
+    train = np.load('train_vect.npy')
+    print train
+    '''
     # Deep Learning Extraction
-    #extractSaveWordEmbeddingFeatures(commentList, commentCount)
-    #extractSaveSentenceValues(articleList,commentList, parentList,commentCount)
+    # extractSaveWordEmbeddingFeatures(commentList, commentCount)
+    # extractSaveSentenceValues(articleList,commentList, parentList,commentCount)
     
     # Classic
-    #extractSaveValues(articleList,commentList, parentList,commentCount)
     #extractSaveFeatures(articleList,commentList, parentList,commentCount)
     #extractSocialData(articleList, commentList, commentCount)
     
     # Vector Space
     extractWordData(articleList, commentList, commentCount)
-    #extractSynsetData(articleList, commentList, commentCount)
+    # extractSynsetData(articleList, commentList, commentCount)
     
-    #extractTopicData(articleList, commentCount,100)    
-    #extractTimeData(articleList, commentCount)    
-    #extractUserData()    
-    #extractAllExperiment(articleList,parentList,500)
+    # extractTopicData(articleList, commentCount,100)    
+    # extractTimeData(articleList, commentCount)    
+    # extractUserData()    
+    # extractAllExperiment(articleList,parentList,500)
     
     
     
