@@ -392,7 +392,7 @@ valueV = 3
   
 if __name__ == '__main__':
     
-    for featureV in [3]:        
+    for featureV in [3,11]:        
     
         y_train = load_numpy_matrix(feature_set_path +  r'valueVector_train.npy')
         y_test = load_numpy_matrix(feature_set_path +  r'valueVector_test.npy')

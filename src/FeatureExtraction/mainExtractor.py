@@ -14,7 +14,7 @@ import pickle
 import pprint
 import re
 import string
-from time import  mktime,strptime
+from time import  mktime, strptime
 
 import nltk
 from nltk.chunk import ne_chunk
@@ -33,21 +33,23 @@ from scipy import stats
 from sklearn.cluster.k_means_ import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from textblob.blob import Blobber
+from textblob.tokenizers import SentenceTokenizer
 from textblob_aptagger.taggers import PerceptronTagger
 
 from DeepLearnings.FeatureExtraction import ENGAGE_MIN
-from FeatureExtraction.LexicalFeatures import words, pos_freq, getVF, getNF,\
+from FeatureExtraction.LexicalFeatures import words, pos_freq, getVF, getNF, \
     getPN, known, swears, entropy, penn_to_wn
-from FeatureExtraction.SentimentUtil import load_classifier, make_full_dict,\
+from FeatureExtraction.SentimentUtil import load_classifier, make_full_dict, \
     get_subjectivity, get_polarity_overlap
-from FeatureExtraction.SurfaceFeatures import lengthiness, question_frequency,\
-    exclamation_frequency, capital_frequency, sentence_capital_frequency,\
+from FeatureExtraction.SurfaceFeatures import lengthiness, question_frequency, \
+    exclamation_frequency, capital_frequency, sentence_capital_frequency, \
     onSubForumTopic, F_K_score, tf_idf, avgTermFreq, timeliness
-from Objects import CommentObject, ArticleObject, UserCommentObject, UserObject,\
+from Objects import CommentObject, ArticleObject, UserCommentObject, UserObject, \
     ArticleCommentObject
 from Profiling.timer import timefunc
 from config import sentiment_path
 import numpy as np
+from nltk.util import ngrams
 
 
 pattern = r'''(?x) # set flag to allow verbose regexps
@@ -480,30 +482,199 @@ def extract_social_features(userList, articleList, commentCount):
     return socialVector
 
 
+class CharacterAnalyzer(object):   
+    def __init__(self):
+        self.lemmatizer = WordNetLemmatizer()    
+        self.tb = Blobber(pos_tagger=PerceptronTagger())
+        self.sentencer = SentenceTokenizer();
+        self.num = 6;
+    def __call__(self, doc):  
+        tokens = []      
+        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
+            sent = sent.lower()
+            for word in word_tokenize(sent):
+                word= ''.join([ch for ch in word if ch not in string.punctuation])
+                for n in range(3,self.num+1):
+                    ngr = [word[i:i+n] for i in range(len(word)-n+1)]
+                    if len(ngr) > 0:
+                        tokens += ngr
+       
+        return tokens
+
+class UnigramAnalyzer(object):   
+    def __init__(self):
+        self.lemmatizer = WordNetLemmatizer()    
+        self.tb = Blobber(pos_tagger=PerceptronTagger())
+        self.sentencer = SentenceTokenizer()
+    def __call__(self, doc):  
+        tokens = []      
+        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
+            sent = sent.lower()
+            tagged = self.tb(sent).tags    
+            # Remove stops
+            filtered_words = [w for w in tagged if not w[0] in stops]
+                   
+            # Remove punctuation
+            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
+                    
+            # Lemmatize
+            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
+            for word in filtered_words:
+                tokens.append(word)
+        return tokens
+                
+class BigramAnalyzer(object):   
+    def __init__(self):
+        self.lemmatizer = WordNetLemmatizer()    
+        self.tb = Blobber(pos_tagger=PerceptronTagger())
+        self.sentencer = SentenceTokenizer()
+    def __call__(self, doc):   
+        tokens = []     
+        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
+            tagged = self.tb(sent.lower()).tags    
+            # Remove stops
+            filtered_words = [w for w in tagged if not w[0] in stops]
+                   
+            # Remove punctuation
+            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
+                    
+            # Lemmatize
+            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
+            for bigram in ngrams(filtered_words,2):
+                tokens.append('%s %s' %bigram)
+        return tokens
+    
+class TrigramAnalyzer(object):   
+    def __init__(self):
+        self.lemmatizer = WordNetLemmatizer()    
+        self.tb = Blobber(pos_tagger=PerceptronTagger())
+        self.sentencer = SentenceTokenizer()
+    def __call__(self, doc):   
+        tokens = []     
+        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
+            tagged = self.tb(sent.lower()).tags    
+            # Remove stops
+            filtered_words = [w for w in tagged if not w[0] in stops]
+                   
+            # Remove punctuation
+            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
+                    
+            # Lemmatize
+            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
+            for trigram in ngrams(filtered_words,3):
+                tokens.append('%s %s %s' %trigram)
+        return tokens
+    
+class QuadgramAnalyzer(object):   
+    def __init__(self):
+        self.lemmatizer = WordNetLemmatizer()    
+        self.tb = Blobber(pos_tagger=PerceptronTagger())
+        self.sentencer = SentenceTokenizer()
+    def __call__(self, doc):   
+        tokens = []     
+        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
+            tagged = self.tb(sent.lower()).tags    
+            # Remove stops
+            filtered_words = [w for w in tagged if not w[0] in stops]
+                   
+            # Remove punctuation
+            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
+                    
+            # Lemmatize
+            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
+            for qgram in ngrams(filtered_words,4):
+                tokens.append('%s %s %s %s' %qgram)
+        return tokens
+    
+class UnigramBigramAnalyzer(object):   
+    def __init__(self):
+        self.lemmatizer = WordNetLemmatizer()    
+        self.tb = Blobber(pos_tagger=PerceptronTagger())
+        self.sentencer = SentenceTokenizer()
+    def __call__(self, doc):   
+        tokens = []     
+        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
+            tagged = self.tb(sent.lower()).tags    
+            # Remove stops
+            filtered_words = [w for w in tagged if not w[0] in stops]
+                   
+            # Remove punctuation
+            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
+                    
+            # Lemmatize
+            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
+            
+            for word in filtered_words:
+                tokens.append(word)
+            for bigram in ngrams(filtered_words,2):
+                tokens.append('%s %s' %bigram)
+        return tokens
+
+
+class UnigramBigramTrigramAnalyzer(object):   
+    def __init__(self):
+        self.lemmatizer = WordNetLemmatizer()    
+        self.tb = Blobber(pos_tagger=PerceptronTagger())
+        self.sentencer = SentenceTokenizer()
+    def __call__(self, doc):   
+        tokens = []     
+        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
+            tagged = self.tb(sent.lower()).tags    
+            # Remove stops
+            filtered_words = [w for w in tagged if not w[0] in stops]
+                   
+            # Remove punctuation
+            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
+                    
+            # Lemmatize
+            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
+            
+            for word in filtered_words:
+                tokens.append(word)
+            for bigram in ngrams(filtered_words,2):
+                tokens.append('%s %s' %bigram)
+            for trigram in ngrams(filtered_words,3):
+                tokens.append('%s %s %s' %trigram)
+        return tokens
+
+    
+class UnigramBigramTrigramQuadgramAnalyzer(object):   
+    def __init__(self):
+        self.lemmatizer = WordNetLemmatizer()    
+        self.tb = Blobber(pos_tagger=PerceptronTagger())
+        self.sentencer = SentenceTokenizer()
+    def __call__(self, doc):   
+        tokens = []     
+        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
+            tagged = self.tb(sent.lower()).tags    
+            # Remove stops
+            filtered_words = [w for w in tagged if not w[0] in stops]
+                   
+            # Remove punctuation
+            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
+                    
+            # Lemmatize
+            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
+            
+            for word in filtered_words:
+                tokens.append(word)
+            for bigram in ngrams(filtered_words,2):
+                tokens.append('%s %s' %bigram)
+            for trigram in ngrams(filtered_words,3):
+                tokens.append('%s %s %s' %trigram)
+            for qgram in ngrams(filtered_words,4):
+                tokens.append('%s %s %s %s' %qgram)
+        return tokens
 
 def extract_global_bag_of_words(commentList):
     corpus = []   
-    
-    lemmatizer = WordNetLemmatizer()    
-    tb = Blobber(pos_tagger=PerceptronTagger())
-    
     i = 0
     for art in commentList.items():        
-        for comm in art[1]:
-            tagged = tb(comm.body).tags
-            # Remove stops
-            filtered_words = [w for w in tagged if not w[0] in stops]
-            
-            # Remove punctuation
-            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
-            
-            # Lemmatize
-            filtered_words = [lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
-                
-            corpus.append(' '.join(filtered_words))
+        for comm in art[1]:           
+            corpus.append(comm.body)
             i += 1
             if i % 1000 == 0:
-                print i, "lemmatized"
+                print i, "extracted"
                 
             
     return corpus
@@ -563,9 +734,11 @@ def extract_global_bag_of_synsets(commentList):
     
        
 def extract_words(vectorizer, train_list, test_list): 
-    count_vect= vectorizer.fit(train_list)
+    count_vect = vectorizer.fit(train_list)
     train = count_vect.transform(train_list)
     test = count_vect.transform(test_list)
+    
+    #print count_vect.get_feature_names()[1000:1010]
     
     #print count_vect.get_feature_names()
     print "Train:", train.shape    

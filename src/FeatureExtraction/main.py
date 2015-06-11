@@ -10,7 +10,7 @@ import nltk
 from nltk.stem.snowball import SnowballStemmer
 from scipy.sparse.csr import csr_matrix
 from sklearn.cross_validation import StratifiedShuffleSplit
-from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer,\
+from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer, \
     CountVectorizer
 from sklearn.linear_model.stochastic_gradient import SGDRegressor
 
@@ -24,7 +24,10 @@ from FeatureExtraction.mainExtractor import read_comments, extract_values, extra
     extract_Time_Data, read_user_comments, \
     extract_user_values, read_user_data, \
     extract_social_features, extract_sentence_values, extract_word_clusters, \
-    extract_global_bag_of_words, extract_words
+    extract_global_bag_of_words, extract_words, UnigramAnalyzer, BigramAnalyzer, \
+    UnigramBigramAnalyzer, UnigramBigramTrigramAnalyzer, \
+    UnigramBigramTrigramQuadgramAnalyzer, TrigramAnalyzer, QuadgramAnalyzer,\
+    CharacterAnalyzer
 from config import sentiment_path, feature_set_path, comment_data_path
 import numpy as np
 
@@ -80,10 +83,9 @@ def extractSynsetData(articleList, commentList, commentCount):
     wd = extract_word_clusters(commentList, commentCount)
     save_sparse_csr(feature_set_path + "clusteredWordData", wd) 
     
-def extractWordData(articleList, commentList, commentCount):
-    processed_comment_list = extract_global_bag_of_words(commentList)
     
-    
+def extractCharacterData(articleList, commentList, commentCount):
+    processed_comment_list = extract_global_bag_of_words(commentList)   
     train_v, test_v = np.load('train_vect.npy'), np.load('test_vect.npy')
     train_list = []
     test_list = []
@@ -92,6 +94,29 @@ def extractWordData(articleList, commentList, commentCount):
     for v in test_v:
         test_list.append(processed_comment_list[v])
         
+    print len(train_list)
+    print len(test_list)
+    
+    print 'Character Ngrams Binary'
+    cb_train, cb_test = extract_words(CountVectorizer(analyzer=CharacterAnalyzer(), binary=True, dtype=float), train_list, test_list)
+    print 'Character Ngrams tfidf'
+    ct_train, ct_test = extract_words(TfidfVectorizer(analyzer=CharacterAnalyzer(), use_idf=True, smooth_idf=True, dtype=float), train_list, test_list)
+    
+    save_sparse_csr(feature_set_path + "binaryCharacterData_train", cb_train) 
+    save_sparse_csr(feature_set_path + "tfidfCharacterData_train", ct_train) 
+    save_sparse_csr(feature_set_path + "binaryCharacterData_test", cb_test) 
+    save_sparse_csr(feature_set_path + "tfidfCharacterData_test", ct_test) 
+    
+def extractWordData(articleList, commentList, commentCount):
+    processed_comment_list = extract_global_bag_of_words(commentList)    
+    
+    train_v, test_v = np.load('train_vect.npy'), np.load('test_vect.npy')
+    train_list = []
+    test_list = []
+    for v in train_v:
+        train_list.append(processed_comment_list[v])
+    for v in test_v:
+        test_list.append(processed_comment_list[v])        
         
     
     #train_list = [' '.join(sent) for sent in train_list]  
@@ -101,35 +126,60 @@ def extractWordData(articleList, commentList, commentCount):
     print len(test_list)
     
     print 'Unigram Binary'
-    bwd_train, bwd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(1,1), binary=True, dtype=float), train_list, test_list)
+    bwd_train, bwd_test = extract_words(CountVectorizer(analyzer=UnigramAnalyzer(), binary=True, dtype=float), train_list, test_list)
     print 'Unigram Frequency'
-    fwd_train, fwd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(1,1), dtype=float), train_list, test_list)
+    fwd_train, fwd_test = extract_words(CountVectorizer(analyzer=UnigramAnalyzer(), dtype=float), train_list, test_list)
     print 'Unigram TFIDF'
-    twd_train, twd_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(1,1), use_idf=True, smooth_idf=True, dtype=float), train_list, test_list)
+    twd_train, twd_test = extract_words(TfidfVectorizer(analyzer=UnigramAnalyzer(), use_idf=True, smooth_idf=True, dtype=float), train_list, test_list)
     print 'Bigram Binary'
-    bbwd_train, bbwd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(1,2), binary=True, dtype=float),train_list, test_list)
+    bbwd_train, bbwd_test = extract_words(CountVectorizer(analyzer=UnigramBigramAnalyzer(), binary=True, dtype=float),train_list, test_list)
     print 'Bigram TFIDF'
-    btwd_train, btwd_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(1,2), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    btwd_train, btwd_test = extract_words(TfidfVectorizer(analyzer=UnigramBigramAnalyzer(), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
     print 'Trigram Binary'
-    tbwd_train, tbwd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(1,3), binary=True, dtype=float),train_list, test_list)
+    tbwd_train, tbwd_test = extract_words(CountVectorizer(analyzer=UnigramBigramTrigramAnalyzer(), binary=True, dtype=float),train_list, test_list)
     print 'Trigram TFIDF'
-    ttwd_train, ttwd_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(1,3), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
-    print 'Quadgram Binary'
-    qbwd_train, qbwd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(1,4), binary=True, dtype=float),train_list, test_list)
-    print 'Quadgram TFIDF'
-    qtwd_train, qtwd_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(1,4), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    ttwd_train, ttwd_test = extract_words(TfidfVectorizer(analyzer=UnigramBigramTrigramAnalyzer(), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
     print 'Bigram Only Binary'
-    bowd_train, bowd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(2,2), binary=True, dtype=float),train_list, test_list)
+    bowd_train, bowd_test = extract_words(CountVectorizer(analyzer=BigramAnalyzer(), binary=True, dtype=float),train_list, test_list)
     print 'Bigram Only TFIDF'
-    bowd2_train, bowd2_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(2,2), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    bowd2_train, bowd2_test = extract_words(TfidfVectorizer(analyzer=BigramAnalyzer(), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
     print 'Trigram Only Binary'
-    towd_train, towd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(3,3), binary=True, dtype=float),train_list, test_list)
+    towd_train, towd_test = extract_words(CountVectorizer(analyzer=TrigramAnalyzer(), binary=True, dtype=float),train_list, test_list)
     print 'Trigram Only TFIDF'
-    towd2_train, towd2_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(3,3), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    towd2_train, towd2_test = extract_words(TfidfVectorizer(analyzer=TrigramAnalyzer(), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+   
+
+    '''
+    print 'Quadgram Binary'
+    qbwd_train, qbwd_test = extract_words(CountVectorizer(analyzer=UnigramBigramTrigramQuadgramAnalyzer(), binary=True, dtype=float),train_list, test_list)
+    print 'Quadgram TFIDF'
+    qtwd_train, qtwd_test = extract_words(TfidfVectorizer(analyzer=UnigramBigramTrigramQuadgramAnalyzer(), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
     print 'Quadgram Only Binary'
-    qowd_train, qowd_test = extract_words(CountVectorizer(analyzer='word', ngram_range=(4,4), binary=True, dtype=float),train_list, test_list)
+    qowd_train, qowd_test = extract_words(CountVectorizer(analyzer=QuadgramAnalyzer(), binary=True, dtype=float),train_list, test_list)
     print 'Quadgram Only TFIDF'
-    qowd2_train, qowd2_test = extract_words(TfidfVectorizer(analyzer='word', ngram_range=(4,4), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    qowd2_train, qowd2_test = extract_words(TfidfVectorizer(analyzer=QuadgramAnalyzer(), use_idf=True, smooth_idf=True, dtype=float),train_list, test_list)
+    '''
+    
+    print(feature_set_path + "binaryWordData_train", bwd_train[123,:]) 
+    print(feature_set_path + "freqWordData_train", fwd_train[123,:]) 
+    print(feature_set_path + "tfidfWordData_train", twd_train[123,:]) 
+    print(feature_set_path + "bigramBinaryWordData_train", bbwd_train[123,:]) 
+    print(feature_set_path + "bigramTfidfWordData_train", btwd_train[123,:]) 
+    print(feature_set_path + "trigramBinaryWordData_train", tbwd_train[123,:]) 
+    print(feature_set_path + "trigramTfidfWordData_train", ttwd_train[123,:]) 
+    
+    print(feature_set_path + "bigramOnlyBinaryWordData_train", bowd_train[123,:])
+    print(feature_set_path + "bigramOnlyTfidfWordData_train", bowd2_train[123,:])
+    print(feature_set_path + "trigramOnlyBinaryWordData_train", towd_train[123,:])
+    print(feature_set_path + "trigramOnlyTfidfWordData_train", towd2_train[123,:])
+    
+    '''
+    print(feature_set_path + "quadgramBinaryWordData_train", qbwd_train[123,:]) 
+    print(feature_set_path + "quadgramTfidfWordData_train", qtwd_train[123,:])  
+    print(feature_set_path + "quadgramOnlyBinaryWordData_train", qowd_train[123,:]) 
+    print(feature_set_path + "quadgramOnlyTfidfWordData_train", qowd2_train[123,:]) 
+    '''
+    
     
     save_sparse_csr(feature_set_path + "binaryWordData_train", bwd_train) 
     save_sparse_csr(feature_set_path + "freqWordData_train", fwd_train) 
@@ -137,16 +187,19 @@ def extractWordData(articleList, commentList, commentCount):
     save_sparse_csr(feature_set_path + "bigramBinaryWordData_train", bbwd_train) 
     save_sparse_csr(feature_set_path + "bigramTfidfWordData_train", btwd_train) 
     save_sparse_csr(feature_set_path + "trigramBinaryWordData_train", tbwd_train) 
-    save_sparse_csr(feature_set_path + "trigramTfidfWordData_train", ttwd_train) 
-    save_sparse_csr(feature_set_path + "quadgramBinaryWordData_train", qbwd_train) 
-    save_sparse_csr(feature_set_path + "quadgramTfidfWordData_train", qtwd_train)  
+    save_sparse_csr(feature_set_path + "trigramTfidfWordData_train", ttwd_train)  
     
     save_sparse_csr(feature_set_path + "bigramOnlyBinaryWordData_train", bowd_train)
     save_sparse_csr(feature_set_path + "bigramOnlyTfidfWordData_train", bowd2_train)
     save_sparse_csr(feature_set_path + "trigramOnlyBinaryWordData_train", towd_train)
     save_sparse_csr(feature_set_path + "trigramOnlyTfidfWordData_train", towd2_train)
+    
+    '''
+    save_sparse_csr(feature_set_path + "quadgramBinaryWordData_train", qbwd_train) 
+    save_sparse_csr(feature_set_path + "quadgramTfidfWordData_train", qtwd_train) 
     save_sparse_csr(feature_set_path + "quadgramOnlyBinaryWordData_train", qowd_train) 
     save_sparse_csr(feature_set_path + "quadgramOnlyTfidfWordData_train", qowd2_train)     
+    '''
     
     save_sparse_csr(feature_set_path + "binaryWordData_test", bwd_test) 
     save_sparse_csr(feature_set_path + "freqWordData_test", fwd_test) 
@@ -155,15 +208,18 @@ def extractWordData(articleList, commentList, commentCount):
     save_sparse_csr(feature_set_path + "bigramTfidfWordData_test", btwd_test) 
     save_sparse_csr(feature_set_path + "trigramBinaryWordData_test", tbwd_test) 
     save_sparse_csr(feature_set_path + "trigramTfidfWordData_test", ttwd_test) 
-    save_sparse_csr(feature_set_path + "quadgramBinaryWordData_test", qbwd_test) 
-    save_sparse_csr(feature_set_path + "quadgramTfidfWordData_test", qtwd_test)  
     
     save_sparse_csr(feature_set_path + "bigramOnlyBinaryWordData_test", bowd_test)
     save_sparse_csr(feature_set_path + "bigramOnlyTfidfWordData_test", bowd2_test)
     save_sparse_csr(feature_set_path + "trigramOnlyBinaryWordData_test", towd_test)
     save_sparse_csr(feature_set_path + "trigramOnlyTfidfWordData_test", towd2_test)
+    
+    '''
+    save_sparse_csr(feature_set_path + "quadgramBinaryWordData_test", qbwd_test) 
+    save_sparse_csr(feature_set_path + "quadgramTfidfWordData_test", qtwd_test)  
     save_sparse_csr(feature_set_path + "quadgramOnlyBinaryWordData_test", qowd_test) 
     save_sparse_csr(feature_set_path + "quadgramOnlyTfidfWordData_test", qowd2_test) 
+    '''
     
 def extractSocialData(articleList, commentList, commentCount):
     userList, userCount = read_user_data(comment_data_path + 'userdata.txt');
@@ -272,7 +328,7 @@ if __name__ == '__main__':
     print "Processed", commentCount, "Comments"
     
     
-    
+    '''
     extractSaveValues(articleList, commentList, parentList, commentCount)
     y = load_numpy_matrix(feature_set_path + r'valueVector.npy')[:, 3]   
     sss = StratifiedShuffleSplit(y, 1, test_size=0.40, random_state=42)
@@ -288,7 +344,7 @@ if __name__ == '__main__':
     '''
     train = np.load('train_vect.npy')
     print train
-    '''
+    
     # Deep Learning Extraction
     # extractSaveWordEmbeddingFeatures(commentList, commentCount)
     # extractSaveSentenceValues(articleList,commentList, parentList,commentCount)
@@ -298,7 +354,8 @@ if __name__ == '__main__':
     #extractSocialData(articleList, commentList, commentCount)
     
     # Vector Space
-    extractWordData(articleList, commentList, commentCount)
+    #extractWordData(articleList, commentList, commentCount)
+    extractCharacterData(articleList, commentList, commentCount)
     # extractSynsetData(articleList, commentList, commentCount)
     
     # extractTopicData(articleList, commentCount,100)    

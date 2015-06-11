@@ -38,10 +38,13 @@ yn = load_numpy_matrix(feature_set_path+ 'valueVector_train.npy')
 #filepath = feature_set_path+ 'quadgramTfidfWordData_train.npz'
 
 #filepath = feature_set_path+ 'bigramOnlyBinaryWordData_train.npz'
-filepath = feature_set_path+ 'bigramOnlyTfidfWordData_train.npz'
+#filepath = feature_set_path+ 'bigramOnlyTfidfWordData_train.npz'
 #filepath = feature_set_path+ 'trigramOnlyBinaryWordData_train.npz'
 #filepath = feature_set_path+ 'trigramOnlyTfidfWordData_train.npz'
 #filepath = feature_set_path+ 'quadgramOnlyBinaryWordData_train.npz'
+#filepath = feature_set_path+ 'quadgramOnlyTfidfWordData_train.npz'
+
+filepath = feature_set_path+ 'binaryCharacterData_train.npz'
 #filepath = feature_set_path+ 'quadgramOnlyTfidfWordData_train.npz'
 
 Xn = load_sparse_csr(filepath)
