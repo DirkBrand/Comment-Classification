@@ -27,7 +27,7 @@ from FeatureExtraction.mainExtractor import read_comments, extract_values, extra
     extract_global_bag_of_words, extract_words, UnigramAnalyzer, BigramAnalyzer, \
     UnigramBigramAnalyzer, UnigramBigramTrigramAnalyzer, \
     UnigramBigramTrigramQuadgramAnalyzer, TrigramAnalyzer, QuadgramAnalyzer,\
-    CharacterAnalyzer
+    CharacterAnalyzer, LexicalBigramAnalyzer
 from config import sentiment_path, feature_set_path, comment_data_path
 import numpy as np
 
@@ -82,7 +82,29 @@ def extractSaveSentenceValues(articleList, commentList, parentList, commentCount
 def extractSynsetData(articleList, commentList, commentCount):
     wd = extract_word_clusters(commentList, commentCount)
     save_sparse_csr(feature_set_path + "clusteredWordData", wd) 
+
+def extractLexicalBigramData(articleList, commentList, commentCount):
+    processed_comment_list = extract_global_bag_of_words(commentList)   
+    train_v, test_v = np.load('train_vect.npy'), np.load('test_vect.npy')
+    train_list = []
+    test_list = []
+    for v in train_v:
+        train_list.append(processed_comment_list[v])
+    for v in test_v:
+        test_list.append(processed_comment_list[v])
+        
+    print len(train_list)
+    print len(test_list)
     
+    print 'Lexical Ngrams Binary'
+    cb_train, cb_test = extract_words(CountVectorizer(analyzer=LexicalBigramAnalyzer(), binary=True, dtype=float), train_list, test_list)
+    save_sparse_csr(feature_set_path + "binaryLexicalBigramsData_train", cb_train) 
+    save_sparse_csr(feature_set_path + "binaryLexicalBigramsData_test", cb_test) 
+    
+    print 'Lexical Ngrams tfidf'
+    ct_train, ct_test = extract_words(TfidfVectorizer(analyzer=LexicalBigramAnalyzer(), use_idf=True, smooth_idf=True, dtype=float), train_list, test_list)    
+    save_sparse_csr(feature_set_path + "tfidfLexicalBigramsData_train", ct_train) 
+    save_sparse_csr(feature_set_path + "tfidfLexicalBigramsData_test", ct_test)
     
 def extractCharacterData(articleList, commentList, commentCount):
     processed_comment_list = extract_global_bag_of_words(commentList)   
@@ -99,12 +121,12 @@ def extractCharacterData(articleList, commentList, commentCount):
     
     print 'Character Ngrams Binary'
     cb_train, cb_test = extract_words(CountVectorizer(analyzer=CharacterAnalyzer(), binary=True, dtype=float), train_list, test_list)
-    print 'Character Ngrams tfidf'
-    ct_train, ct_test = extract_words(TfidfVectorizer(analyzer=CharacterAnalyzer(), use_idf=True, smooth_idf=True, dtype=float), train_list, test_list)
-    
     save_sparse_csr(feature_set_path + "binaryCharacterData_train", cb_train) 
-    save_sparse_csr(feature_set_path + "tfidfCharacterData_train", ct_train) 
     save_sparse_csr(feature_set_path + "binaryCharacterData_test", cb_test) 
+    
+    print 'Character Ngrams tfidf'
+    ct_train, ct_test = extract_words(TfidfVectorizer(analyzer=CharacterAnalyzer(), use_idf=True, smooth_idf=True, dtype=float), train_list, test_list)    
+    save_sparse_csr(feature_set_path + "tfidfCharacterData_train", ct_train) 
     save_sparse_csr(feature_set_path + "tfidfCharacterData_test", ct_test) 
     
 def extractWordData(articleList, commentList, commentCount):
@@ -355,7 +377,9 @@ if __name__ == '__main__':
     
     # Vector Space
     #extractWordData(articleList, commentList, commentCount)
-    extractCharacterData(articleList, commentList, commentCount)
+    #extractCharacterData(articleList, commentList, commentCount)
+    extractLexicalBigramData(articleList, commentList, commentCount)
+    
     # extractSynsetData(articleList, commentList, commentCount)
     
     # extractTopicData(articleList, commentCount,100)    
