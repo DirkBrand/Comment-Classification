@@ -38,6 +38,8 @@ class CommentObject(object):
             self.status = 0
         else:
             self.status = int(status)
+        
+        self.rating = 0
             
         self.date = date
         self.author = author
@@ -47,3 +49,6 @@ class CommentObject(object):
         
     def setWords(self,words):
         self.words = words
+        
+    def setRating(self, rating):
+        self.rating = int(rating)

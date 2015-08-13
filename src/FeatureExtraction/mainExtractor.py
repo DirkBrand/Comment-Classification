@@ -14,11 +14,19 @@ import pickle
 import pprint
 import re
 import string
+import sys
 from time import  mktime, strptime
 
+from LexicalFeatures import words, pos_freq, getVF, getNF, \
+    getPN, known, swears, entropy, penn_to_wn
+from SentimentUtil import load_classifier, make_full_dict, \
+    get_subjectivity, get_polarity_overlap
+from SurfaceFeatures import lengthiness, question_frequency, \
+    exclamation_frequency, capital_frequency, sentence_capital_frequency, \
+    onSubForumTopic, F_K_score, tf_idf, avgTermFreq, timeliness
 import nltk
 from nltk.chunk import ne_chunk
-from nltk.corpus import wordnet as wn
+from nltk.corpus import wordnet as wn, stopwords
 from nltk.corpus import wordnet_ic
 from nltk.stem.porter import PorterStemmer
 from nltk.stem.snowball import SnowballStemmer
@@ -26,6 +34,8 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.tag import pos_tag
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.tokenize.regexp import RegexpTokenizer, wordpunct_tokenize
+from nltk.util import ngrams
+from numpy import Inf
 from pywsd import disambiguate
 from pywsd.lesk import simple_lesk
 from pywsd.similarity import max_similarity as maxsim
@@ -33,23 +43,14 @@ from scipy import stats
 from sklearn.cluster.k_means_ import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from textblob.blob import Blobber
-from textblob.tokenizers import SentenceTokenizer
+from textblob.tokenizers import SentenceTokenizer, WordTokenizer
 from textblob_aptagger.taggers import PerceptronTagger
 
-from DeepLearnings.FeatureExtraction import ENGAGE_MIN
-from FeatureExtraction.LexicalFeatures import words, pos_freq, getVF, getNF, \
-    getPN, known, swears, entropy, penn_to_wn
-from FeatureExtraction.SentimentUtil import load_classifier, make_full_dict, \
-    get_subjectivity, get_polarity_overlap
-from FeatureExtraction.SurfaceFeatures import lengthiness, question_frequency, \
-    exclamation_frequency, capital_frequency, sentence_capital_frequency, \
-    onSubForumTopic, F_K_score, tf_idf, avgTermFreq, timeliness
 from Objects import CommentObject, ArticleObject, UserCommentObject, UserObject, \
-    ArticleCommentObject
+    ArticleCommentObject, SlashdotCommentObject
 from Profiling.timer import timefunc
 from config import sentiment_path
 import numpy as np
-from nltk.util import ngrams
 
 
 pattern = r'''(?x) # set flag to allow verbose regexps
@@ -97,29 +98,14 @@ def lexical_diversity(text):
     return len(set(text)) / len(text)
 
 c = 0
-def extract_values(articleList, commentList, parentList, commentCount):
-    valueVector = np.empty([commentCount,4])
+def extract_values(articleList, commentList, commentCount, type):
+    valueVector = np.empty([commentCount])
     index = 0
                  
-    sumLikes = 0         
-    sumDislikes = 0
-    sumRatio = 0
-    for art in commentList.values():
-        for comm in art:
-            sumLikes += comm.likeCount 
-            sumDislikes += comm.dislikeCount
-            sumRatio += comm.likeCount/float(max(1,comm.likeCount+comm.dislikeCount))
-    
-    globalMean = np.mean(np.append(np.ones(sumLikes),(np.zeros(sumDislikes))))
-    print "Global vote mean:", globalMean
-    
-    for art in commentList.values():
-        sumVotes = 0
-        for comm in art:
-            sumVotes += comm.likeCount + comm.dislikeCount
-        
-        for comm in art:
-            
+    for art in commentList.values():        
+        for comm in art:   
+                
+            '''                           
             tokens = nltk.regexp_tokenize(comm.body, pattern)
             theWords = words(comm.body)
             uniqueWords = set(theWords)
@@ -137,19 +123,36 @@ def extract_values(articleList, commentList, parentList, commentCount):
             #print ttest
             
             totalVotes = comm.likeCount + comm.dislikeCount
-                
-                                       
             valueVector[index,0] = totalVotes
             valueVector[index,1] = ratio
             if comm.reported > 0:
                 valueVector[index,2] = 1
             else:
                 valueVector[index,2] = 0
-            
-            if comm.status == 1:
-                valueVector[index,3] = 0
-            else:
-                valueVector[index,3] = 1                
+            '''
+            if type == 1: # MAIN
+                if comm.status == 1:
+                    valueVector[index] = 0
+                else:
+                    valueVector[index] = 1  
+            elif type == 2: # TOY           
+                if comm.rating == 1:
+                    valueVector[index] = 1
+                elif comm.rating == 2:
+                    valueVector[index] = 0
+                elif comm.rating == 3:
+                    valueVector[index] = 0 
+                else:
+                    valueVector[index] = 0 
+            elif type == 3:
+                if int(comm.score) <=1:
+                    valueVector[index] = 0
+                elif int(comm.score) == 2:
+                    valueVector[index] = 1
+                else:
+                    valueVector[index] = 2
+                    
+                          
             
             index += 1
             if index % 1000 == 0:
@@ -159,6 +162,8 @@ def extract_values(articleList, commentList, parentList, commentCount):
                 break
         if index >= commentCount:
             break
+        
+    print "\nClass distribution %.3f" %(np.sum(valueVector)/valueVector.shape[0])
                 
     return valueVector
 
@@ -216,6 +221,190 @@ def extract_sentence_values(articleList, commentList, parentList, commentCount):
                 
     return valueVector
 
+
+def extract_slashdot_feature_matrix(articleList, commentList, commentCount):
+    # Sentence Tokenizer
+    sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
+    
+    # Sentiment Classifier
+    clf = load_classifier(sentiment_path + 'sentiment_classifier.pickle')
+    
+    featureMatrix = np.empty([commentCount,25])
+    
+    
+    index = 0
+    for commList in commentList.values():
+        sumLen = 0
+        for comm in commList:
+            sumLen += len(words(comm.body))
+            
+        avgLen = float(sumLen) / len(commList)
+        
+        # Thread BOW: with CHUNKING
+        cnt = Counter()
+        for comm in commList:
+            sentences = nltk.sent_tokenize(comm.body)
+            sentences = [nltk.word_tokenize(sent) for sent in sentences]
+            sentences = [nltk.pos_tag(sent) for sent in sentences]
+            
+            for sent in sentences:
+                chunks = nltk.ne_chunk(sent, binary=True)
+                doc = [] 
+                for chunk in chunks:
+                    if type(chunk) == nltk.Tree:
+                        doc.append(' '.join(c[0] for c in chunk.leaves()))
+                    else:
+                        doc.append(chunk[0])
+                doc = [word.strip(string.punctuation) for word in doc if len(word.strip(string.punctuation)) > 1]
+                for w in doc:
+                    cnt[w] += 1
+
+
+
+        # Article BOW: with CHUNKING
+        articleCnt = Counter()
+        sentences = nltk.sent_tokenize(articleList[commList[0].article_id].body)
+        sentences = [nltk.word_tokenize(sent) for sent in sentences]
+        sentences = [nltk.pos_tag(sent) for sent in sentences]
+        for sent in sentences:
+            chunks = nltk.ne_chunk(sent, binary=True)
+            doc = []
+            for chunk in chunks:
+                if type(chunk) == nltk.Tree:
+                    doc.append(' '.join(c[0] for c in chunk.leaves()))
+                else:
+                    doc.append(chunk[0])
+            doc = [word.strip(string.punctuation) for word in doc if len(word.strip(string.punctuation)) > 1]
+    
+            for w in doc:
+                articleCnt[w] += 1
+            
+                     
+        # Average Timeliness
+        startTime = mktime(commList[0].date)
+        sum = 0
+        for comm in commList:
+            diff = mktime(comm.date) - startTime
+            startTime = mktime(comm.date)
+            sum += diff
+        
+        aveTime = float(sum) / float(len(commList))
+
+        for ind in range(len(commList)):
+            comm = commList[ind]
+
+            tokens = nltk.regexp_tokenize(comm.body, pattern)
+            text = nltk.Text([w.lower() for w in tokens])
+            theWords = words(comm.body)
+            uniqueWords = set(theWords)
+            sentences = sent_detector.tokenize(comm.body.strip())
+            
+            if len(tokens) == 0 or len(uniqueWords) == 0:
+                continue
+            
+                    
+            commLengthiness = lengthiness(avgLen, theWords)
+            numberCharacters = len(comm.body)
+            diversity = lexical_diversity(text)
+                
+            qf = question_frequency(sentences)
+            ef = exclamation_frequency(sentences)
+            cf = capital_frequency(tokens)
+            scf = sentence_capital_frequency(sentences)
+            
+            pf = pos_freq(theWords)
+            vf = getVF(pf)
+            nf = getNF(pf)
+
+            pronouns = getPN(pf)
+                       
+                
+            threadRelevance = onSubForumTopic(tokens, cnt.keys())
+            articleRelevance = onSubForumTopic(tokens, articleCnt.keys())
+            
+            
+            spelled = len(known(uniqueWords))
+            spelledPerc = float(spelled) / len(uniqueWords)
+            badWords = len(swears(uniqueWords))
+            badWordsPerc = float(badWords) / len(uniqueWords)
+            complexity = entropy(comm.body, theWords)
+            readibility = F_K_score(comm.body, sentences)
+            informativeness = tf_idf(text, theWords, commList)
+            meantermFreq = avgTermFreq(text, theWords)
+            #termFreq = 0
+            
+            testSet = dict()
+            refWords = make_full_dict(theWords)
+            testSet.update(refWords)
+                
+                
+            probDist = clf.prob_classify(testSet)                
+            sentiment = probDist.prob('pos')            
+            subj_obj = get_subjectivity(probDist)
+
+            polarity_overlap = get_polarity_overlap(nltk.regexp_tokenize(articleList[commList[0].article_id].body, pattern), theWords)
+
+
+            if ind > 0:
+                timely = timeliness(mktime(comm.date), mktime(commList[ind-1].date), aveTime)
+            else:
+                timely = timeliness(mktime(comm.date), mktime(comm.date), aveTime)
+
+
+            timePassing = mktime(comm.date) - mktime(commList[0].date)
+            
+            if timePassing < 0 or timely < 0:
+                timePassing = 0
+                timely = 0
+          
+            #printValues(comm.author, comm.likeCount, comm.dislikeCount, (comm.likeCount+correction) / (comm.dislikeCount+comm.likeCount+2*correction), commLen, qf, ef, cf, nf, vf, spelled, badWords, complexity, readibility, termFreq, sentiment)
+            
+            featureMatrix[index] = np.array([timely, #0
+                                             timePassing, #1
+                                             commLengthiness, #2
+                                             numberCharacters, #3
+                                             vf, #4
+                                             nf, #5
+                                             pronouns, #6
+                                             cf, #7
+                                             qf, #8
+                                             ef, #9
+                                             scf, #10
+                                             complexity, #11
+                                             diversity, #12
+                                             spelled, #13
+                                             spelledPerc, #14
+                                             badWords, #15
+                                             badWordsPerc, #16
+                                             meantermFreq, #17
+                                             informativeness, #18
+                                             readibility, #19
+                                             threadRelevance, #20
+                                             articleRelevance, #21
+                                             sentiment, #22
+                                             subj_obj, #23
+                                             polarity_overlap, #24
+                                             #likes,
+                                             #dislikes,
+                                             #ratio,
+                                             #reports,
+                                             #engagement
+                                             ], float) #25
+            index += 1
+            if index % 100 == 0:
+                print "extracted", index, "features"
+
+            if index >= commentCount:
+                break
+            
+        if index >= commentCount:
+            break
+        
+                
+    return featureMatrix
+
+
+
 def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
     # Sentence Tokenizer
     sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
@@ -223,7 +412,7 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
     # Sentiment Classifier
     clf = load_classifier(sentiment_path + 'sentiment_classifier.pickle')
     
-    featureMatrix = np.empty([commentCount,23])
+    featureMatrix = np.empty([commentCount,25])
     
     
     index = 0
@@ -313,7 +502,7 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
             pronouns = getPN(pf)
                        
                 
-            #threadRelevance = onSubForumTopic(tokens, cnt.keys())
+            threadRelevance = onSubForumTopic(tokens, cnt.keys())
             articleRelevance = onSubForumTopic(tokens, articleCnt.keys())
             
             
@@ -323,7 +512,7 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
             badWordsPerc = float(badWords) / len(uniqueWords)
             complexity = entropy(comm.body, theWords)
             readibility = F_K_score(comm.body, sentences)
-            #informativeness = tf_idf(text, theWords, commList)
+            informativeness = tf_idf(text, theWords, commList)
             meantermFreq = avgTermFreq(text, theWords)
             #termFreq = 0
             
@@ -385,9 +574,9 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
                                              badWords, #7
                                              badWordsPerc, #8
                                              meantermFreq, #12
-                                             #informativeness, #23
+                                             informativeness, #23
                                              readibility, #11
-                                             #threadRelevance, #17
+                                             threadRelevance, #17
                                              articleRelevance, #18
                                              sentiment, #13
                                              subj_obj, #14
@@ -482,137 +671,127 @@ def extract_social_features(userList, articleList, commentCount):
     return socialVector
 
 
-class CharacterAnalyzer(object):   
+class CharacterSkipGramAnalyzer(object):   
     def __init__(self):
-        self.lemmatizer = WordNetLemmatizer()    
-        self.tb = Blobber(pos_tagger=PerceptronTagger())
-        self.sentencer = SentenceTokenizer();
-        self.num = 6;
+        self.sentencer = SentenceTokenizer()
+        self.worder = WordTokenizer();
     def __call__(self, doc):  
         tokens = []      
-        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
-            sent = sent.lower()
-            for word in word_tokenize(sent):
-                word= ''.join([ch for ch in word if ch not in string.punctuation])
-                for n in range(3,self.num+1):
-                    ngr = [word[i:i+n] for i in range(len(word)-n+1)]
-                    if len(ngr) > 0:
-                        tokens += ngr
-       
+        for sent in self.sentencer.tokenize(doc.lower()):
+            words = ''.join([ch for ch in sent if ch not in string.punctuation])
+            words = self.worder.tokenize(words)
+            
+            for word in words:
+                tokens.append(word.strip())
+                if len(word) > 2:
+                    for j in range(0,len(word)):    
+                        term = word[:j] + word[j+1:] 
+                        tokens.append(term.strip())
+        return tokens
+    
+class CharacterAnalyzer(object):   
+    def __init__(self):
+        self.sentencer = SentenceTokenizer()
+        self.max = 8
+        self.min = 2
+    def __call__(self, doc):  
+        tokens = []      
+        for sent in self.sentencer.tokenize(doc.lower()):
+            words = ''.join([ch for ch in sent if ch not in string.punctuation])
+            for n in range(self.min,self.max+1):
+                ngr = [words[i:i+n] for i in range(len(words)-n+1)]
+                if len(ngr) > 0:
+                    tokens += ngr
         return tokens
 
 class UnigramAnalyzer(object):   
-    def __init__(self):
-        self.lemmatizer = WordNetLemmatizer()    
-        self.tb = Blobber(pos_tagger=PerceptronTagger())
-        self.sentencer = SentenceTokenizer()
     def __call__(self, doc):  
-        tokens = []      
-        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
-            sent = sent.lower()
-            tagged = self.tb(sent).tags    
-            # Remove stops
-            filtered_words = [w for w in tagged if not w[0] in stops]
-                   
-            # Remove punctuation
-            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
-                    
-            # Lemmatize
-            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
-            for word in filtered_words:
-                tokens.append(word)
+        
+        filtered_words = doc.split(" ")
+        tokens = []
+            
+        for word in filtered_words:
+            tokens.append(word)
         return tokens
     
 
                 
 class BigramAnalyzer(object):   
-    def __init__(self):
-        self.lemmatizer = WordNetLemmatizer()    
-        self.tb = Blobber(pos_tagger=PerceptronTagger())
-        self.sentencer = SentenceTokenizer()
     def __call__(self, doc):   
-        tokens = []     
-        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
-            tagged = self.tb(sent.lower()).tags    
-            # Remove stops
-            filtered_words = [w for w in tagged if not w[0] in stops]
-                   
-            # Remove punctuation
-            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
-                    
-            # Lemmatize
-            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
-            for bigram in ngrams(filtered_words,2):
-                tokens.append('%s %s' %bigram)
+        
+        filtered_words = doc.split(" ")
+        tokens = []
+            
+        for bigram in ngrams(filtered_words,2):
+            tokens.append('%s %s' %bigram)
         return tokens
     
 class TrigramAnalyzer(object):   
-    def __init__(self):
-        self.lemmatizer = WordNetLemmatizer()    
-        self.tb = Blobber(pos_tagger=PerceptronTagger())
-        self.sentencer = SentenceTokenizer()
     def __call__(self, doc):   
-        tokens = []     
-        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
-            tagged = self.tb(sent.lower()).tags    
-            # Remove stops
-            filtered_words = [w for w in tagged if not w[0] in stops]
-                   
-            # Remove punctuation
-            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
-                    
-            # Lemmatize
-            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
-            for trigram in ngrams(filtered_words,3):
-                tokens.append('%s %s %s' %trigram)
+        
+        filtered_words = doc.split(" ")
+        tokens = []
+            
+        for trigram in ngrams(filtered_words,3):
+            tokens.append('%s %s %s' %trigram)
         return tokens
     
-class QuadgramAnalyzer(object):   
-    def __init__(self):
-        self.lemmatizer = WordNetLemmatizer()    
-        self.tb = Blobber(pos_tagger=PerceptronTagger())
-        self.sentencer = SentenceTokenizer()
+class QuadgramAnalyzer(object):  
     def __call__(self, doc):   
-        tokens = []     
-        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
-            tagged = self.tb(sent.lower()).tags    
-            # Remove stops
-            filtered_words = [w for w in tagged if not w[0] in stops]
-                   
-            # Remove punctuation
-            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
-                    
-            # Lemmatize
-            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
-            for qgram in ngrams(filtered_words,4):
-                tokens.append('%s %s %s %s' %qgram)
+        
+        filtered_words = doc.split(" ")
+        tokens = []
+            
+        for qgram in ngrams(filtered_words,4):
+            tokens.append('%s %s %s %s' %qgram)
         return tokens
     
 class UnigramBigramAnalyzer(object):   
-    def __init__(self):
-        self.lemmatizer = WordNetLemmatizer()    
-        self.tb = Blobber(pos_tagger=PerceptronTagger())
-        self.sentencer = SentenceTokenizer()
-    def __call__(self, doc):   
-        tokens = []     
-        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
-            tagged = self.tb(sent.lower()).tags    
-            # Remove stops
-            filtered_words = [w for w in tagged if not w[0] in stops]
-                   
-            # Remove punctuation
-            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
-                    
-            # Lemmatize
-            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
+    def __call__(self, doc):
+        
+        filtered_words = doc.split(" ")
+        tokens = []
             
-            for word in filtered_words:
-                tokens.append(word)
-            for bigram in ngrams(filtered_words,2):
-                tokens.append('%s %s' %bigram)
+            
+        for word in filtered_words:
+            tokens.append(word)
+        for bigram in ngrams(filtered_words,2):
+            tokens.append('%s %s' %bigram)
         return tokens
 
-class LexicalBigramAnalyzer(object):   
+    
+class UnigramBigramTrigramAnalyzer(object):  
+    def __call__(self, doc): 
+        filtered_words = doc.split(" ")
+        tokens = []
+            
+            
+        for word in filtered_words:
+            tokens.append(word)
+        for bigram in ngrams(filtered_words,2):
+            tokens.append('%s %s' %bigram)
+        for trigram in ngrams(filtered_words,3):
+            tokens.append('%s %s %s' %trigram)
+        return tokens
+
+    
+class UnigramBigramTrigramQuadgramAnalyzer(object): 
+    def __call__(self, doc): 
+        filtered_words = doc.split(" ")
+        tokens = []
+            
+        for word in filtered_words:
+            tokens.append(word)
+        for bigram in ngrams(filtered_words,2):
+            tokens.append('%s %s' %bigram)
+        for trigram in ngrams(filtered_words,3):
+            tokens.append('%s %s %s' %trigram)
+        for qgram in ngrams(filtered_words,4):
+            tokens.append('%s %s %s %s' %qgram)
+        return tokens
+    
+    
+class LexicalBigramUnigramAnalyzer(object):   
     def __init__(self):
         self.lemmatizer = WordNetLemmatizer()    
         self.tb = Blobber(pos_tagger=PerceptronTagger())
@@ -623,80 +802,60 @@ class LexicalBigramAnalyzer(object):
             tagged = self.tb(sent.lower()).tags    
             
             tagged = [(t[0], penn_to_wn(t[1])) for t in tagged]
-            
+            tagged = [(t[0], t[1]) for t in tagged if t[0] not in stopwords.words('english')]
             ng = zip(tagged, tagged[1:])
             rule1 = [(t[0],t[1]) for t in ng if t[0][1]== wn.ADJ and t[1][1]== wn.NOUN]
             rule2 = [(t[0],t[1]) for t in ng if (t[0][1]== wn.ADV and t[1][1]== wn.VERB) or (t[0][1]== wn.VERB and t[1][1]== wn.ADV)]
+            rule3 = [(t[0],t[1]) for t in ng if t[0][1]== wn.VERB and t[1][1]== wn.VERB]
+            rule4 = [(t[0],t[1]) for t in ng if t[0][1]== wn.NOUN and t[1][1]== wn.NOUN]
             
-            filtered_list = rule1 + rule2
+            filtered_list = rule1 + rule2 + rule3 + rule4
                              
                     
             # Lemmatize
-            filtered_list = [self.lemmatizer.lemmatize(t[0][0], t[0][1]) + ' ' + self.lemmatizer.lemmatize(t[1][0], t[1][1]) for t in filtered_list]
-            for bigram in filtered_list:
+            filtered_bigrams = [self.lemmatizer.lemmatize(t[0][0], t[0][1]) + ' ' + self.lemmatizer.lemmatize(t[1][0], t[1][1]) for t in filtered_list]
+            filtered_unigrams = [self.lemmatizer.lemmatize(w[0], w[1]) for w in tagged]
+            for bigram in filtered_bigrams:
                 tokens.append(bigram)
-        return tokens
-    
-class UnigramBigramTrigramAnalyzer(object):   
-    def __init__(self):
-        self.lemmatizer = WordNetLemmatizer()    
-        self.tb = Blobber(pos_tagger=PerceptronTagger())
-        self.sentencer = SentenceTokenizer()
-    def __call__(self, doc):   
-        tokens = []     
-        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
-            tagged = self.tb(sent.lower()).tags    
-            # Remove stops
-            filtered_words = [w for w in tagged if not w[0] in stops]
-                   
-            # Remove punctuation
-            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
-                    
-            # Lemmatize
-            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
-            
-            for word in filtered_words:
-                tokens.append(word)
-            for bigram in ngrams(filtered_words,2):
-                tokens.append('%s %s' %bigram)
-            for trigram in ngrams(filtered_words,3):
-                tokens.append('%s %s %s' %trigram)
+            for unigram in filtered_unigrams:
+                tokens.append(unigram)
         return tokens
 
-    
-class UnigramBigramTrigramQuadgramAnalyzer(object):   
-    def __init__(self):
-        self.lemmatizer = WordNetLemmatizer()    
-        self.tb = Blobber(pos_tagger=PerceptronTagger())
-        self.sentencer = SentenceTokenizer()
-    def __call__(self, doc):   
-        tokens = []     
-        for sent in self.sentencer.tokenize(doc.decode('ascii','ignore')):
-            tagged = self.tb(sent.lower()).tags    
-            # Remove stops
-            filtered_words = [w for w in tagged if not w[0] in stops]
-                   
-            # Remove punctuation
-            filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
-                    
-            # Lemmatize
-            filtered_words = [self.lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]
+def extract_global_bag_of_words_processed(commentList):
+    corpus = []   
+    i = 0
+    lemmatizer = WordNetLemmatizer()    
+    tb = Blobber(pos_tagger=PerceptronTagger())
+    sentencer = SentenceTokenizer()
+    for art in commentList.items():        
+        for comm in art[1]:    
+            tokens = []   
+            for sent in sentencer.tokenize(comm.body.decode('ascii','ignore')):
+                tagged = tb(sent.lower()).tags    
+                # Remove stops
+                filtered_words = [w for w in tagged if not w[0] in stopwords.words('english')]
+                       
+                # Remove punctuation
+                filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
+                        
+                # Lemmatize
+                filtered_words = [lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]  
+                for word in filtered_words:
+                    tokens.append(word)  
+            corpus.append(' '.join(tokens))
+            i += 1
+            if i % 1000 == 0:
+                print i, "words processed for Ngrams"
+                
             
-            for word in filtered_words:
-                tokens.append(word)
-            for bigram in ngrams(filtered_words,2):
-                tokens.append('%s %s' %bigram)
-            for trigram in ngrams(filtered_words,3):
-                tokens.append('%s %s %s' %trigram)
-            for qgram in ngrams(filtered_words,4):
-                tokens.append('%s %s %s %s' %qgram)
-        return tokens
+    return corpus
+
 
 def extract_global_bag_of_words(commentList):
     corpus = []   
     i = 0
     for art in commentList.items():        
-        for comm in art[1]:           
+        for comm in art[1]:   
             corpus.append(comm.body)
             i += 1
             if i % 1000 == 0:
@@ -882,7 +1041,7 @@ def extract_bigrams(articleList, commentCount):
             mywords = onlyWords(comm.body)
             mywords = known(mywords)
             # Remove Stops
-            filtered_words = [w for w in mywords if not w in stops]
+            filtered_words = [w for w in mywords if not w in stopwords.words('english')]
             # Stemming
             stemmed_words = [stemmer.stem(w) for w in filtered_words]
             bagOfWords += stemmed_words
@@ -906,7 +1065,7 @@ def extract_bigrams(articleList, commentCount):
             mywords = onlyWords(comm.body)
             mywords = known(mywords)
             # Remove Stops
-            filtered_words = [w for w in mywords if not w in stops]
+            filtered_words = [w for w in mywords if not w in stopwords.words('english')]
             # Stemming
             stemmed_words = [stemmer.stem(w) for w in filtered_words]
             bgs = nltk.bigrams(stemmed_words)
@@ -950,13 +1109,205 @@ def extract_Time_Data(articleList, commentCount):
     return timeData;
 
 
+def read_slashdot_comments(filename, limit=Inf, skip=True):
+    f1 = open(filename, 'r')    
+        
+    # To process all the comments
+    articleList = dict()
+    CommentsList = defaultdict(list)
+    
+    commentCount = 0
+    skippedCount = 0
+    for line in f1:
+        temp = line.split('&')
+        if len(temp) != 15:
+            continue        
+        
+        article_id = temp[0]
+        comment_id = temp[1]
+        super_parent_id = temp[2]
+        direct_parent_id = temp[3]
+        author = temp[4]
+        score = temp[5]
+        flag = temp[6].strip(" ")
+        date = strptime(temp[7].strip("<> "), "on %A %B %d, %Y @%I:%M%p ()")
+        articleTitle = temp[9]
+        articleBody = temp[10].replace('..', '.').replace('.', '. ') 
+        commentTitle = temp[11].replace('..', '.').replace('.', '. ')    
+        hasLink = temp[12]
+        commentContent = temp[13].replace('..', '.').replace('.', '. ') 
+        quotedText = temp[14].replace('..', '.').replace('.', '. ') 
+        
+        if (skip):
+            if author.lower() == "anonymous coward" and int(score) == 0:
+                skippedCount += 1
+                continue
+            
+            if author.lower() != "anonymous coward" and int(score) == 1:
+                skippedCount += 1
+                continue
+            
+        
+        comm = SlashdotCommentObject.CommentObject(article_id,comment_id,super_parent_id, direct_parent_id, author, score, flag, date, commentTitle, hasLink, commentContent, quotedText)   
+      
+        
+        
+        article = ArticleObject.ArticleObject(article_id, articleTitle, "", articleBody)
 
-WORD_MIN = 25 # At least that many words per comment (TWEET)
+
+       
+        
+        commentCount += 1
+        if commentCount % 10000 == 0:
+            print "Read", commentCount, "comments"
+
+
+        articleList[article_id] = article
+        CommentsList[article_id].append(comm)
+        
+        if commentCount >= limit:
+            break
+
+    print "Done with comments"
+        
+
+    print "Skipped",skippedCount
+    print "Saved",commentCount
+    return articleList, CommentsList, commentCount
+
+def read_toy_comments(mainfilename, filename):
+    f1 = open(mainfilename, 'r')        
+    f2 = open(filename, 'r')        
+        
+    # To process all the comments
+    articleList = dict()
+    CommentsList = defaultdict(list)
+    parentList = dict()
+    justComms = []
+    
+    i = 0
+    for line in f1:
+        temp = line.split('&')
+        if len(temp) < 16:
+            continue        
+        
+        CO_id = temp[0]
+        C_id = temp[1]
+        P_id = temp[2]
+        U_id = temp[3]
+        likes = temp[4]
+        dislikes = temp[5]
+        reported = temp[6]
+        status = temp[7]
+        rating = temp[8] 
+        date = strptime(temp[9].split('.')[0], "%Y-%m-%d %H:%M:%S")
+        author = temp[10]
+        articleTitle = temp[11].replace('..', '.').replace('.', '. ')       
+        articleSynopsis = temp[12].replace('..', '.').replace('.', '. ')    
+        body = temp[13].replace('..', '.').replace('.', '. ') 
+        lemma_body = temp[14].replace('..', '.').replace('.', '. ') 
+        pos_body = temp[15].replace('..', '.').replace('.', '. ')             
+        
+    
+        
+        comm = CommentObject.CommentObject(C_id, CO_id, P_id, U_id, likes, dislikes, reported,status, date, author, body,lemma_body, pos_body)   
+      
+        
+        
+        article = ArticleObject.ArticleObject(CO_id, articleTitle, articleSynopsis, "")
+
+
+        if P_id == 'null' and not parentList.has_key(C_id):
+            parentList[C_id] = 0
+        else:
+            if parentList.has_key(P_id):           
+                parentList[P_id] += 1
+            else:
+                parentList[P_id] = 1
+        
+        i += 1
+        if i % 10000 == 0:
+            print "Read", i, "comments"
+
+        articleList[CO_id] = article
+        CommentsList[CO_id].append(comm)
+        justComms.append(comm)
+
+    print "Done with main comments"
+    
+    ToyArticleList = dict()
+    ToyCommentsList = defaultdict(list)
+    ToyParentList = dict()
+    
+    commentCount = 0
+    # Toy comment set
+    for line in f2:        
+        temp = line.split('|')
+        if len(temp) < 5:
+            continue        
+        
+        comment = temp[0].replace('&','and').replace('..', '.').replace('.', '. ').replace('@','') 
+        rating = temp[1]
+        
+        if not (rating == '1' or rating == '2' or rating == '3'):
+            continue
+        
+        if len(comment) == 0:
+            continue
+        
+        #print comment
+        
+        s2 = comment.translate(string.maketrans("",""), string.punctuation).replace(" ","")
+        found = False
+        for comm in justComms:
+            s1 = comm.body.translate(string.maketrans("",""), string.punctuation).replace(" ","")
+            if s2 in s1:
+                comm.setRating(rating)
+                ToyCommentsList[comm.article_id].append(comm)
+                ToyArticleList[comm.article_id] = articleList[comm.article_id]
+                if comm.parentId == 'null':
+                    ToyParentList[comm.id] = parentList[comm.id]
+                else:
+                    ToyParentList[comm.parentId] = parentList[comm.parentId]
+                
+                commentCount += 1
+                if commentCount % 100 == 0:
+                    print "Read", commentCount, "comments"
+                found = True
+                break
+                   
+        #if not found:         
+        #    print found
+    
+        
+
+    print "Saved",commentCount
+    return ToyArticleList, ToyCommentsList, ToyParentList, commentCount
+
+def levenshteinDistance(s1,s2):
+    if len(s1) > len(s2):
+        s1,s2 = s2,s1
+    distances = range(len(s1) + 1)
+    for index2,char2 in enumerate(s2):
+        newDistances = [index2+1]
+        for index1,char1 in enumerate(s1):
+            if char1 == char2:
+                newDistances.append(distances[index1])
+            else:
+                newDistances.append(1 + min((distances[index1],
+                                             distances[index1+1],
+                                             newDistances[-1])))
+        distances = newDistances
+    return distances[-1]
+ 
+
+
+WORD_MIN = 20 # At least that many words per comment (TWEET)
 ENGAGE_MIN = 20 # At least that many total votes
 VOTES_MIN = 0 # At least that many individual votes
 MIN_THREAD_LENGTH = 20 # Threads at least that long
 
-def read_comments(filename):
+def read_comments(filename, skip=True):
     f = open(filename, 'r')        
         
     # To process all the comments
@@ -968,6 +1319,9 @@ def read_comments(filename):
     
     commentCount = 0
     totalCount = 0
+    lessThanCount = 0
+    mtnCount = 0
+    
     for line in f:
         temp = line.split('&')
         if len(temp) < 16:
@@ -991,12 +1345,6 @@ def read_comments(filename):
         pos_body = temp[15].replace('..', '.').replace('.', '. ')             
     
         totalCount += 1
-        '''
-        if body in unique_comments:
-            continue
-        else:
-            unique_comments.add(body)
-        '''
         
         comm = CommentObject.CommentObject(C_id, CO_id, P_id, U_id, likes, dislikes, reported,status, date, author, body,lemma_body, pos_body)
         
@@ -1012,14 +1360,16 @@ def read_comments(filename):
         if dislikes < VOTES_MIN:
             continue
         '''
-        comm.setWords(words(comm.body))
-        if len(comm.words) < WORD_MIN:
-            continue
-        
-        
-        if rating == 0 or rating == 4:
-            continue
-        
+        if skip:
+            comm.setWords(words(comm.body))
+            if len(comm.words) < WORD_MIN:
+                lessThanCount += 1
+                continue
+            '''
+            if "mtn" in comm.body.lower():
+                mtnCount += 1
+                continue
+            '''
         article = ArticleObject.ArticleObject(CO_id, articleTitle, articleSynopsis, "")
 
 
@@ -1050,6 +1400,8 @@ def read_comments(filename):
             commentCount += len(a[1])    
     '''
     print "Saved",commentCount,"comments out of", totalCount
+    print lessThanCount, "comments less than", WORD_MIN
+    print mtnCount, "mtn comments"
     
     return articleList, CommentsList, parentList, commentCount
 
@@ -1088,6 +1440,8 @@ def comments_stats(filename):
         if rating == 0 or rating == 4:
             continue
         
+        if len(words(body)) < WORD_MIN:
+            continue
 
         sum_of_words += len(words(body))
 
@@ -1182,7 +1536,7 @@ def read_user_comments(filename):
             mywords = onlyWords(comm.body)
             mywords = known(mywords)
             # Remove Stops
-            filtered_words = [w for w in mywords if not w in stops]
+            filtered_words = [w for w in mywords if not w in stopwords.words('english')]
             # Stemming
             stemmed_words = [stemmer.stem(w) for w in filtered_words]
             user.bagOfWords += stemmed_words

@@ -8,6 +8,7 @@ from collections import Counter
 import os
 import pickle
 
+from FeatureExtraction.main import load_sparse_csr, load_numpy_matrix
 import nltk
 from nltk.metrics.scores import precision, recall
 from scipy.sparse import sparsetools
@@ -19,12 +20,11 @@ from sklearn.feature_selection import SelectPercentile, f_classif, SelectKBest
 from sklearn.feature_selection.univariate_selection import f_regression, chi2
 from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, f1_score,\
     metrics
-from sklearn.metrics.metrics import precision_score, recall_score
+from sklearn.metrics.metrics import precision_score, recall_score,\
+    classification_report
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
 
-from FeatureExtraction.main import load_sparse_csr, load_numpy_matrix
-from RatingPrediction import elm
 from RatingPrediction.Classification import *
 from RatingPrediction.Regression import *
 from config import feature_set_path
@@ -32,7 +32,7 @@ import numpy as np
 
 
 VALUES = [ 'totalVotes', 'percentage of total','ratio','Status']
-FEATURES = [ 'CF', 'BTF','FTF','TTF', 'BBTF', 'BTTF', 'TBTF', 'TTTF', 'QBTF', 'QTTF', 'BiOnlyBi','BiOnlyTFIDF', 'TriOnlyBi', 'TriOnlyTFIDF','QuadOnlyBi','QuadOnlyTFIDF',  'SL-MMM', 'SL-TWS', 'SL-BOC', 'POS-MMM', 'POS-TWS', 'POS-BOC', 'BG-MMM', 'BG-TWS', 'BG-BOC', 'Google-MMM', 'Google-TWS', 'Google-BOC']
+FEATURES = [ 'CF', 'BTF','FTF','TTF', 'BBTF', 'BTTF', 'TBTF', 'TTTF', 'QBTF', 'QTTF', 'BiOnlyBi','BiOnlyTFIDF', 'TriOnlyBi', 'TriOnlyTFIDF','QuadOnlyBi','QuadOnlyTFIDF', 'binaryChar', 'tfidfChar', 'binaryLexicalBigrams', 'tfidfLexicalBigrams',  'SL-MMM', 'SL-TWS', 'SL-BOC', 'POS-MMM', 'POS-TWS', 'POS-BOC', 'BG-MMM', 'BG-TWS', 'BG-BOC', 'Google-MMM', 'Google-TWS', 'Google-BOC']
             
 
 
@@ -83,86 +83,6 @@ def getDateTime(filename):
     
     
 
-def getDataSets(normalize, cross_multiply, selected, data_representation=0):
-    output = ''
-    
-      
-    tempCWD = os.getcwd()
-    
-    os.chdir('D:\Workspace\NLTK comments\src\FeatureExtraction')
-    
-         
-    featureSet = load_numpy_matrix("featureArray.npy")
-    valueVector = load_numpy_matrix("valueVector.npy")
-    binaryWordData = load_sparse_csr('binaryWordData.npz')  
-    freqWordData = load_sparse_csr('freqWordData.npz')  
-    tfidfWordData = load_sparse_csr('tfidfWordData.npz') 
-    rawTfidfWordData = load_sparse_csr('rawTfidfWordData.npz')
-    bigramTfidfWordData = load_sparse_csr('bigramTfidfWordData.npz')  
-    topicData = load_numpy_matrix('topicData.npy')   
-    socialVector = load_numpy_matrix('socialVector.npy')   
-    
-    if data_representation == 0: # BINARY
-        wordDataVector = binaryWordData
-    elif data_representation == 1: # FREQUENCY
-        wordDataVector = freqWordData
-    elif data_representation == 2: # TFIDF
-        wordDataVector = tfidfWordData
-    elif data_representation == 3: # RAW TFIDF
-        wordDataVector = rawTfidfWordData
-    elif data_representation == 4: # BIGRAM TFIDF
-        wordDataVector = bigramTfidfWordData
-    
-    
-    output += 'Loaded training and testing data\n'
-    
-    os.chdir(tempCWD)
-    
-    
-    # Adding Columns 2*6*12*16*17*18
-    if cross_multiply:
-        bestFeat = [5, 13, 19, 20, 23, 25]
-
-        for i in range(0,len(bestFeat)-1):
-            for j in range(i+1,len(bestFeat)) :
-                featureSet = np.c_[featureSet, featureSet[:, bestFeat[i]] * featureSet[:, bestFeat[j]]]
-
-        output += "Added new columns\n"
-
-    
-    # NORMALIZATION
-    if normalize:
-        featureSet = preprocessing.scale(featureSet)
-        #valueVector = preprocessing.scale(valueVector)
-        #binaryWordData = preprocessing.scale(binaryWordData)
-        #freqWordData = preprocessing.scale(freqWordData)
-        #tfidfWordData = preprocessing.scale(tfidfWordData)
-        topicData = preprocessing.scale(topicData)
-        socialVector = preprocessing.scale(socialVector)
-        output += "Scaled training & testing Features\n"
-    
-    # FEATURE SELECTION 
-    if selected:
-        featureSet = LinearSVC(C=0.01, penalty="l1", dual=False).fit_transform(featureSet, valueVector[:,0])
-        wordDataVector = SelectPercentile(score_func=chi2, percentile=20).fit(wordDataVector, valueVector).transform(wordDataVector)
-        
-        
-    
-    # Binning
-    '''
-    featureSet[:,0] = binScaling(featureSet[:,0], 10)
-    featureSet[:,14] = binScaling(featureSet[:,14], 10)
-    
-    X_test[:,0] = binScaling(X_test[:,0], 10)
-    X_test[:,14] = binScaling(X_test[:,14], 10)
-    
-    '''
-    
-    
-    
-    
-    return featureSet, valueVector, wordDataVector ,topicData, socialVector, output
-
 def runRegressionModelTest(featureSet, valueVector, model):    
     output = ''
     clf = 0
@@ -172,11 +92,6 @@ def runRegressionModelTest(featureSet, valueVector, model):
     elif model == 2:
         print "\nSVR\n"
         clf = SVR_fit(featureSet, valueVector)
-    elif model == 3:
-        print "\nEXTREME LEARNING MACHINE\n"
-        clf = elm.ELMRegressor()
-        clf.fit(featureSet, valueVector)
-        joblib.dump(clf, 'elm.pkl')
     elif model == 4:
         print "\nSTOCHASTIC\n"
         clf = SGD_r_fit(featureSet, valueVector)
@@ -205,126 +120,193 @@ def runRegressionModelTest(featureSet, valueVector, model):
     
     return clf 
 
-def runClassificationTest(X, y, model, featureset):
+def runClassificationTest(X, y, model, featureset, datatype):
     clf = 0
     kernel='rbf'
     C=0
     Lc = 0
     gamma=0
-    if featureset == 0: #Custom Features
-        C = 100000
-        Lc = 10000
-        gamma = 10.0
-    if featureset == 1: #Binary word Features
-        C = 10
-        Lc = 1
-        gamma = 0.071968567300115208
-    if featureset == 2: #Freq Word Features
-        C = 10
-        Lc = 1
-        gamma = 0.071968567300115208      
-    if featureset == 3: #TFIDF word Features
-        C =10
-        Lc = 1
-        gamma = 0.071968567300115208 
-    if featureset == 4: #Bigram binary word Features
-        C = 100
-        Lc = 0.1
-        gamma = 0.0026826957952797272
-    if featureset == 5: #Bigram tfidf word Features
-        C = 100
-        Lc = 10
-        gamma = 0.013894954943731374
-    if featureset == 6: #Trigram binary word Features
-        C = 10000
-        Lc = 1
-        gamma = 0.01
-    if featureset == 7: #Trigram tfidf word Features
-        C = 10
-        Lc = 10
-        gamma = 0.1
-    if featureset == 8: #Quadgram binary word Features
-        C = 10
-        Lc = 0.1
-        gamma = 0.01
-    if featureset == 9: #Quadgram tfidf word Features
-        C = 10
-        Lc = 10
-        gamma = 0.37275937203149417
-    if featureset == 10: #Bigram ONLY binary word Features
-        C = 100
-        Lc = 1
-        gamma = 0.0005179474679231213
-    if featureset == 11: #Bigram ONLY tfidf word Features
-        C = 10
-        Lc = 1
-        gamma = 0.071968567300115208
-    if featureset == 12: #Triigram ONLY binary word Features
-        C = 1
-        Lc = 10
-        gamma = 0.071968567300115208
-    if featureset == 13: #Triigram ONLY tfidf word Features
-        C1 = 1.0
-        C = 10000000
-        Lc = 1000
-        gamma1 = 0.071968567300115208
-        gamma = 0.1312
-    if featureset == 14: #Quadgram ONLY binary word Features
-        C = 1
-        Lc = 10
-        gamma = 0.071968567300115208
-    if featureset == 15: #Quadgram ONLY tfidf word Features
-        C = 1000000
-        Lc = 1000
-        gamma = 0.013894954943731374
-    '''
-        
-    if featureset == 11: #sentence MMM Features
-        C = 7524
-        Lc = 100000
-        gamma = 0.0769
-    if featureset == 11: #sentence TWS Features
-        C = 12336
-        Lc = 1000
-        gamma = 0.3406
-    if featureset == 12: #sentence BOC Features
-        C = 71830
-        Lc = 100
-        gamma = 0.3963
-    if featureset == 13: #POS mmm Features
-        C = 36738
-        Lc = 1000
-        gamma = 0.3638
-    if featureset == 14: #POS tfidf Features
-        C = 164211
-        Lc = 10000
-        gamma = 0.0028
-    if featureset == 15: #POS BOC Features
-        C = 68903
-        Lc = 100
-        gamma = 0.264
-    if featureset == 16: #Bigram mmm Features
-        C = 1000
-        Lc = 10000
-        gamma = 0.0
-    if featureset == 17: #Bigram tfidf Features
-        C = 100000
-        Lc = 1000
-        gamma = 0.5    
-    if featureset == 18: #Bigram BOC Features
-        C = 120
-        Lc = 10000
-        gamma = 0.1539
-    if featureset == 19: #Google mmm Features
-        C = 117795
-        Lc = 1000000
-        gamma = 0.0209
-    if featureset == 20: #Google tfidf Features
-        C = 32598
-        Lc = 1000
-        gamma = 0.664
-     '''
-        
+    if datatype==1:
+        if featureset == 0: #Custom Features
+            C = 100000
+            Lc = 10000
+            gamma = 10.0
+        if featureset == 1: #Binary word Features
+            C = 10
+            Lc = 1
+            gamma = 0.071968567300115208
+        if featureset == 2: #Freq Word Features
+            C = 10
+            Lc = 1
+            gamma = 0.071968567300115208      
+        if featureset == 3: #TFIDF word Features
+            C =10
+            Lc = 1
+            gamma = 0.071968567300115208 
+        if featureset == 4: #Bigram binary word Features
+            C = 100
+            Lc = 0.1
+            gamma = 0.0026826957952797272
+        if featureset == 5: #Bigram tfidf word Features
+            C = 100
+            Lc = 10
+            gamma = 0.013894954943731374
+        if featureset == 6: #Trigram binary word Features
+            C = 10000
+            Lc = 1
+            gamma = 0.01
+        if featureset == 7: #Trigram tfidf word Features
+            C = 10
+            Lc = 10
+            gamma = 0.1
+        if featureset == 8: #Quadgram binary word Features
+            C = 10
+            Lc = 0.1
+            gamma = 0.01
+        if featureset == 9: #Quadgram tfidf word Features
+            C = 10
+            Lc = 10
+            gamma = 0.37275937203149417
+        if featureset == 10: #Bigram ONLY binary word Features
+            C = 100
+            Lc = 1
+            gamma = 0.0005179474679231213
+        if featureset == 11: #Bigram ONLY tfidf word Features
+            C = 10
+            Lc = 1
+            gamma = 0.071968567300115208
+        if featureset == 12: #Triigram ONLY binary word Features
+            C = 1
+            Lc = 10
+            gamma = 0.071968567300115208
+        if featureset == 13: #Triigram ONLY tfidf word Features
+            C1 = 1.0
+            C = 100000
+            Lc = 10
+            gamma1 = 0.071968567300115208
+            gamma = 0.0001
+        if featureset == 14: #Quadgram ONLY binary word Features
+            C = 1
+            Lc = 10
+            gamma = 0.071968567300115208
+        if featureset == 15: #Quadgram ONLY tfidf word Features
+            C = 1000000
+            Lc = 1000
+            gamma = 0.013894954943731374
+        if featureset == 16: #Binary Character Features
+            C = 1000 # 0.837
+            Lc = 10
+            gamma = 0.001
+        if featureset == 17: #TFDIF Character Features
+            C = 1000 # 0.879
+            Lc = 10 # 0.807
+            gamma = 0.01
+        if featureset == 18: #Binary character skipgram Features
+            C = 1000 #0.764
+            Lc = 10#0.764
+            gamma =0.001
+        if featureset == 19: #TFIDF character skipgram Features
+            C = 1000 #0.764
+            Lc = 10#0.764
+            gamma =0.001
+        if featureset == 20: #Binary Lexical Bigram Unigram Features
+            C = 100000 #0.764
+            Lc = 100#0.764
+            gamma =0.001
+        if featureset == 21: #TFIDF Lexical Bigram Unigram Features
+            C = 1000000
+            Lc = 1000
+            gamma = 0.013894954943731374
+    elif datatype==2: # TOY
+        if featureset == 1:
+            C = 1000
+            gamma = 0.001
+            Lc = 10
+        if featureset == 2:
+            C = 100
+            gamma = 0.605
+            Lc = 10
+        if featureset == 3:
+            C = 1000
+            gamma = 0.001
+            Lc = 1
+        if featureset == 4:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 5:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 6:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 7:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 10:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 11:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 12:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 13:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+    elif datatype==3: # SLASHDOT
+        if featureset == 1:
+            C = 1000
+            gamma = 0.001
+            Lc = 10
+        if featureset == 2:
+            C = 100
+            gamma = 0.605
+            Lc = 10
+        if featureset == 3:
+            C = 1000
+            gamma = 0.001
+            Lc = 1
+        if featureset == 4:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 5:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 6:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 7:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 10:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 11:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 12:
+            C = 1
+            gamma = 0.01
+            Lc = 1
+        if featureset == 13:
+            C = 1
+            gamma = 0.01
+            Lc = 1
         
            
     if model == 1:
@@ -375,81 +357,94 @@ def normalize_sets_dense (train, test):
     norm1 =  np.linalg.norm(train, axis=0)       
     return normalized(train, norm1), normalized(test, norm1)
 
-def test(X, y):
-       
-    ###############################################################################
-    # Univariate feature selection with F-test for feature scoring
-    # We use the default selection function: the 10% most significant features
-    
-    selector2 = SelectKBest(score_func=f_regression, k=6)
-    selector2.fit(X, y)
-    print [zero_based_index for zero_based_index in list(selector2.get_support(indices=True))]
 
 
 reg = False
 scale = True
-valueV = 3
+datatype = 1
+tag = '_main'
+#tag = "_toy"
+#tag = '_slashdot'
   
 if __name__ == '__main__':
     
-    for featureV in [3,11]:        
-    
-        y_train = load_numpy_matrix(feature_set_path +  r'valueVector_train.npy')
-        y_test = load_numpy_matrix(feature_set_path +  r'valueVector_test.npy')
+    for featureV in [1,2,3,4,5,6,7,10,11,12,13]:          
+        y_train = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_train.npy')
+        y_test = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_test.npy')
         
         if featureV == 0:
-            X_train = load_numpy_matrix(feature_set_path +  r'featureArray_train.npy')
-            sd = load_numpy_matrix(feature_set_path +  r'socialVector_train.npy')
+            X_train = load_numpy_matrix(feature_set_path +  r'featureArray'+tag+'_train.npy')
+            sd = load_numpy_matrix(feature_set_path +  r'socialVector'+tag+'_train.npy')
             X_train =  np.hstack((X_train,sd))
-            X_test = load_numpy_matrix(feature_set_path +  r'featureArray_test.npy')
-            sd2 = load_numpy_matrix(feature_set_path +  r'socialVector_test.npy')
+            X_test = load_numpy_matrix(feature_set_path +  r'featureArray'+tag+'_test.npy')
+            sd2 = load_numpy_matrix(feature_set_path +  r'socialVector'+tag+'_test.npy')
             X_test =  np.hstack((X_test,sd2))
             perc = 50
         elif featureV == 1:
-            X_train = load_sparse_csr(feature_set_path +  r'binaryWordData_train.npz')  
-            X_test = load_sparse_csr(feature_set_path +  r'binaryWordData_test.npz')  
+            X_train = load_sparse_csr(feature_set_path +  r'binaryWordData'+tag+'_train.npz')  
+            X_test = load_sparse_csr(feature_set_path +  r'binaryWordData'+tag+'_test.npz')  
         elif featureV == 2:
-            X_train = load_sparse_csr(feature_set_path +  r'freqWordData_train.npz')  
-            X_test = load_sparse_csr(feature_set_path +  r'freqWordData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'freqWordData'+tag+'_train.npz')  
+            X_test = load_sparse_csr(feature_set_path +  r'freqWordData'+tag+'_test.npz') 
         elif featureV == 3:
-            X_train = load_sparse_csr(feature_set_path +  r'tfidfWordData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'tfidfWordData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'tfidfWordData'+tag+'_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'tfidfWordData'+tag+'_test.npz') 
         elif featureV == 4:
-            X_train = load_sparse_csr(feature_set_path +  r'bigramBinaryWordData_train.npz')  
-            X_test = load_sparse_csr(feature_set_path +  r'bigramBinaryWordData_test.npz')  
+            X_train = load_sparse_csr(feature_set_path +  r'bigramBinaryWordData'+tag+'_train.npz')  
+            X_test = load_sparse_csr(feature_set_path +  r'bigramBinaryWordData'+tag+'_test.npz')  
         elif featureV == 5:
-            X_train = load_sparse_csr(feature_set_path +  r'bigramTfidfWordData_train.npz')  
-            X_test = load_sparse_csr(feature_set_path +  r'bigramTfidfWordData_test.npz')  
+            X_train = load_sparse_csr(feature_set_path +  r'bigramTfidfWordData'+tag+'_train.npz')  
+            X_test = load_sparse_csr(feature_set_path +  r'bigramTfidfWordData'+tag+'_test.npz')  
         elif featureV == 6:
-            X_train = load_sparse_csr(feature_set_path +  r'trigramBinaryWordData_train.npz')  
-            X_test = load_sparse_csr(feature_set_path +  r'trigramBinaryWordData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'trigramBinaryWordData'+tag+'_train.npz')  
+            X_test = load_sparse_csr(feature_set_path +  r'trigramBinaryWordData'+tag+'_test.npz') 
         elif featureV == 7:
-            X_train = load_sparse_csr(feature_set_path +  r'trigramTfidfWordData_train.npz')  
-            X_test = load_sparse_csr(feature_set_path +  r'trigramTfidfWordData_test.npz')  
+            X_train = load_sparse_csr(feature_set_path +  r'trigramTfidfWordData'+tag+'_train.npz')  
+            X_test = load_sparse_csr(feature_set_path +  r'trigramTfidfWordData'+tag+'_test.npz')  
         elif featureV == 8:
-            X_train = load_sparse_csr(feature_set_path +  r'quadgramBinaryWordData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'quadgramBinaryWordData_test.npz')  
+            X_train = load_sparse_csr(feature_set_path +  r'quadgramBinaryWordData'+tag+'_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'quadgramBinaryWordData'+tag+'_test.npz')  
         elif featureV == 9:
-            X_train = load_sparse_csr(feature_set_path +  r'quadgramTfidfWordData_train.npz')  
-            X_test = load_sparse_csr(feature_set_path +  r'quadgramTfidfWordData_test.npz')
+            X_train = load_sparse_csr(feature_set_path +  r'quadgramTfidfWordData'+tag+'_train.npz')  
+            X_test = load_sparse_csr(feature_set_path +  r'quadgramTfidfWordData'+tag+'_test.npz')
         elif featureV == 10:
-            X_train = load_sparse_csr(feature_set_path +  r'bigramOnlyBinaryWordData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'bigramOnlyBinaryWordData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'bigramOnlyBinaryWordData'+tag+'_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'bigramOnlyBinaryWordData'+tag+'_test.npz') 
         elif featureV == 11:
-            X_train = load_sparse_csr(feature_set_path +  r'bigramOnlyTfidfWordData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'bigramOnlyTfidfWordData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'bigramOnlyTfidfWordData'+tag+'_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'bigramOnlyTfidfWordData'+tag+'_test.npz') 
         elif featureV == 12:
-            X_train = load_sparse_csr(feature_set_path +  r'trigramOnlyBinaryWordData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'trigramOnlyBinaryWordData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'trigramOnlyBinaryWordData'+tag+'_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'trigramOnlyBinaryWordData'+tag+'_test.npz') 
         elif featureV == 13:
-            X_train = load_sparse_csr(feature_set_path +  r'trigramOnlyTfidfWordData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'trigramOnlyTfidfWordData_test.npz')
+            X_train = load_sparse_csr(feature_set_path +  r'trigramOnlyTfidfWordData'+tag+'_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'trigramOnlyTfidfWordData'+tag+'_test.npz')
         elif featureV == 14:
-            X_train = load_sparse_csr(feature_set_path +  r'quadgramOnlyBinaryWordData_train.npz')  
-            X_test = load_sparse_csr(feature_set_path +  r'quadgramOnlyBinaryWordData_test.npz')  
+            X_train = load_sparse_csr(feature_set_path +  r'quadgramOnlyBinaryWordData'+tag+'_train.npz')  
+            X_test = load_sparse_csr(feature_set_path +  r'quadgramOnlyBinaryWordData'+tag+'_test.npz')  
         elif featureV == 15:
-            X_train = load_sparse_csr(feature_set_path +  r'quadgramOnlyTfidfWordData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'quadgramOnlyTfidfWordData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'quadgramOnlyTfidfWordData'+tag+'_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'quadgramOnlyTfidfWordData'+tag+'_test.npz') 
+            
+        elif featureV == 16:
+            X_train = load_sparse_csr(feature_set_path +  r'binaryCharacterData_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'binaryCharacterData_test.npz') 
+        elif featureV == 17:
+            X_train = load_sparse_csr(feature_set_path +  r'tfidfCharacterData_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'tfidfCharacterData_test.npz') 
+        elif featureV == 18:
+            X_train = load_sparse_csr(feature_set_path +  r'binaryCharacterSkipgramData_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'binaryCharacterSkipgramData_test.npz') 
+        elif featureV == 19:
+            X_train = load_sparse_csr(feature_set_path +  r'tfidfCharacterSkipgramData_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'tfidfCharacterSkipgramData_test.npz') 
+        elif featureV == 20:
+            X_train = load_sparse_csr(feature_set_path +  r'binaryLexicalBigramsData_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'binaryLexicalBigramsData_test.npz') 
+        elif featureV == 21:
+            X_train = load_sparse_csr(feature_set_path +  r'tfidfLexicalBigramsData_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'tfidfLexicalBigramsData_test.npz') 
+            
              
             '''
         elif featureV == 11:
@@ -485,7 +480,6 @@ if __name__ == '__main__':
        # test(Xn, yn)   
             
              
-        print "\nValues",VALUES[valueV]
         print "\nFeatures",FEATURES[featureV]
         print '\nTotal:', X_train.shape[0] + X_test.shape[0] 
         print 'Features:', X_train.shape[1]   
@@ -531,18 +525,27 @@ if __name__ == '__main__':
             print "Nr Of Features", X_train.shape[1]
             print "Nr Of train Rows", X_train.shape[0]
             print "Nr Of test Rows", X_test.shape[0]
-            for m in [1,2]:
+            for m in [1, 2]:
                 print "STARTING CLASSIFICATION"
-                clf = runClassificationTest(X_train, y_train, m, featureV)
+                clf = runClassificationTest(X_train, y_train, m, featureV, datatype)
                 
+                predicted= clf.predict(X_test)
+                print "Accuracy: %0.3f " % (accuracy_score(y_test,predicted ))
                 
-                print "Accuracy: %0.3f " % (accuracy_score(y_test, clf.predict(X_test)))
+                '''
                 print "precision ", (precision_score(y_test, clf.predict(X_test), average=None))
                 print "recall  ", (recall_score(y_test, clf.predict(X_test), average=None))
                 print "F1 Score ", (f1_score(y_test, clf.predict(X_test), average=None))
+                '''
                 
         
-                print draw_confusion_matrix(y_test, clf.predict(X_test), [0,1])
+                if datatype == 3:
+                    print classification_report(y_test, predicted, target_names=['0','1', '2'], digits=3)
+                    print draw_confusion_matrix(y_test, predicted, [0,1,2])
+                else:
+                    print classification_report(y_test, predicted, target_names=['0','1'], digits=3)
+                    print draw_confusion_matrix(y_test, predicted, [0,1])
+                    
         
     
     

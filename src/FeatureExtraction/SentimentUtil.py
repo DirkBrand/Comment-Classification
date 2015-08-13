@@ -17,7 +17,6 @@ from nltk.classify.naivebayes import NaiveBayesClassifier
 from nltk.metrics import BigramAssocMeasures
 from nltk.metrics.association import BigramAssocMeasures
 from nltk.probability import FreqDist, ConditionalFreqDist
-from sklearn import svm, datasets, linear_model, tree, naive_bayes
 from config import sentiment_path
 
 
