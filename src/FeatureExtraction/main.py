@@ -4,6 +4,7 @@ Created on 03 Mar 2014
 @author: Dirk
 '''
 
+import datetime
 import pickle
 
 from FeatureExtraction.mainExtractor import read_comments, extract_values, extract_feature_matrix, \
@@ -22,6 +23,7 @@ from SentimentUtil import create_classifier, make_full_dict, \
 from gensim import matutils, models, corpora
 import nltk
 from nltk.stem.snowball import SnowballStemmer
+from scipy import sparse
 from scipy.sparse.csr import csr_matrix
 from sklearn.cross_validation import StratifiedShuffleSplit
 from sklearn.feature_extraction.text import TfidfVectorizer, TfidfTransformer, \
@@ -31,6 +33,8 @@ from sklearn.linear_model.stochastic_gradient import SGDRegressor
 from DeepLearnings.Features import getCommentCount, tfidf_weighted_sum_features, \
     train_clusterer, bag_of_centroids_features, get_paragraph_features
 from DeepLearnings.Main import get_model
+from DeepLearnings.ModelTraining import comment_to_wordlist,\
+    comment_to_words_for_topics
 from config import sentiment_path, feature_set_path, comment_data_path,\
     model_path
 import numpy as np
@@ -120,7 +124,7 @@ def extractLexicalBigramData(articleList, commentList, commentCount):
     save_sparse_csr(feature_set_path + "tfidfLexicalBigramsData_train", ct_train) 
     save_sparse_csr(feature_set_path + "tfidfLexicalBigramsData_test", ct_test)
     
-def extractCharacterData(articleList, commentList, commentCount):
+def extractCharacterData(articleList, commentList, commentCount, tag):
     comment_list = extract_global_bag_of_words(commentList)   
     train_v, test_v = np.load('train_vect.npy'), np.load('test_vect.npy')
     train_list = []
@@ -135,37 +139,46 @@ def extractCharacterData(articleList, commentList, commentCount):
     
     print 'Character Ngrams Binary'
     cb_train, cb_test = extract_words(CountVectorizer(analyzer=CharacterAnalyzer(), binary=True, dtype=float), train_list, test_list)
-    save_sparse_csr(feature_set_path + "binaryCharacterData_train", cb_train) 
-    save_sparse_csr(feature_set_path + "binaryCharacterData_test", cb_test) 
+    save_sparse_csr(feature_set_path + "binaryCharacterData" + tag + "_train", cb_train) 
+    save_sparse_csr(feature_set_path + "binaryCharacterData" + tag + "_test", cb_test) 
     
     print 'Character Ngrams tfidf'
     ct_train, ct_test = extract_words(TfidfVectorizer(analyzer=CharacterAnalyzer(), use_idf=True, smooth_idf=True, dtype=float), train_list, test_list)    
-    save_sparse_csr(feature_set_path + "tfidfCharacterData_train", ct_train) 
-    save_sparse_csr(feature_set_path + "tfidfCharacterData_test", ct_test) 
+    save_sparse_csr(feature_set_path + "tfidfCharacterData" + tag + "_train", ct_train) 
+    save_sparse_csr(feature_set_path + "tfidfCharacterData" + tag + "_test", ct_test) 
      
     print 'Character skipgrams Binary'
     sb_train, sb_test = extract_words(CountVectorizer(analyzer=CharacterSkipGramAnalyzer(), binary=True, dtype=float), train_list, test_list)
-    save_sparse_csr(feature_set_path + "binaryCharacterSkipgramData_train", sb_train) 
-    save_sparse_csr(feature_set_path + "binaryCharacterSkipgramData_test", sb_test) 
+    save_sparse_csr(feature_set_path + "binaryCharacterSkipgramData" + tag + "_train", sb_train) 
+    save_sparse_csr(feature_set_path + "binaryCharacterSkipgramData" + tag + "_test", sb_test) 
     
     print 'Character skipgrams TFIDF'
     sb_train, sb_test = extract_words(TfidfVectorizer(analyzer=CharacterSkipGramAnalyzer(), use_idf=True, smooth_idf=True, dtype=float), train_list, test_list)
-    save_sparse_csr(feature_set_path + "tfidfCharacterSkipgramData_train", sb_train) 
-    save_sparse_csr(feature_set_path + "tfidfCharacterSkipgramData_test", sb_test)     
+    save_sparse_csr(feature_set_path + "tfidfCharacterSkipgramData" + tag + "_train", sb_train) 
+    save_sparse_csr(feature_set_path + "tfidfCharacterSkipgramData" + tag + "_test", sb_test)     
 
     
     
 def extractTopicModelData(articleList, commentList, commentCount, set_tag, tag):
-    processed_comment_list = extract_global_bag_of_words_processed(commentList)       
-    print len(processed_comment_list)
+    corpus = []
+    i = 0
+    for art in commentList.items():        
+        for comm in art[1]:   
+            corpus.append(comment_to_words_for_topics(comm.body))
+            i += 1
+            if i % 100 == 0:
+                print i,datetime.datetime.now().time()
+    
+         
+    print len(corpus)
     
     train_v, test_v = np.load('train_vect.npy'), np.load('test_vect.npy')
     train_list = []
     test_list = []
     for v in train_v:
-        train_list.append(processed_comment_list[v])
+        train_list.append(corpus[v])
     for v in test_v:
-        test_list.append(processed_comment_list[v])    
+        test_list.append(corpus[v])    
         
     lda = models.LdaModel.load(model_path + set_tag.replace("_","") + "_lda_model")
     
@@ -173,20 +186,21 @@ def extractTopicModelData(articleList, commentList, commentCount, set_tag, tag):
     train = [dictionary.doc2bow(text) for text in train_list]
     test = [dictionary.doc2bow(text) for text in test_list]
     
-    
+    lda.print_topics(20, 5)
     
     docTopicProbMat_train = lda[train]
     docTopicProbMat_test = lda[test]
     
+    #print lda.top_topics(docTopicProbMat_train, 10)
     
-    train_lda=matutils.corpus2dense(docTopicProbMat_train)
-    test_lda=matutils.corpus2dense(docTopicProbMat_test)
+    train_lda=matutils.corpus2dense(docTopicProbMat_train, 100, num_docs=len(train)).transpose()
+    test_lda=matutils.corpus2dense(docTopicProbMat_test, 100, num_docs=len(test)).transpose()
       
     print train_lda.shape
     print test_lda.shape
     
-    save_sparse_csr(feature_set_path + set_tag + "lda" + tag + "_train", train_lda) 
-    save_sparse_csr(feature_set_path + set_tag + "lda" + tag + "_test", test_lda) 
+    save_sparse_csr(feature_set_path + set_tag + "lda" + tag + "_train", sparse.csr_matrix(train_lda)) 
+    save_sparse_csr(feature_set_path + set_tag + "lda" + tag + "_test",  sparse.csr_matrix(test_lda)) 
     
     print "DONE LDA"
     
@@ -330,32 +344,35 @@ def extractSaveWordEmbeddingFeatures(commentList, commentCount, modeltag, datata
     train = []
     test = []
     
+   
     print "ONE"
     fs1 = tfidf_weighted_sum_features(get_model(1,"Basic300" + modeltag), commentList, commentCount)
     train, test = fs1[train_v], fs1[test_v]
     save_numpy_matrix(feature_set_path + "Basic300" + modeltag + "_TfidfFeatures" + datatag + "_train", train) 
-    save_numpy_matrix(feature_set_path + "Basic300" + modeltag + "_TfidfFeatures" + datatag + "_test", test)    
-    
+    save_numpy_matrix(feature_set_path + "Basic300" + modeltag + "_TfidfFeatures" + datatag + "_test", test) 
+      
+    ''' 
     print "TWO"    
     centroid_map, num_clusters = train_clusterer(get_model(1,"Basic300" + modeltag), commentList)
     fs2 = bag_of_centroids_features(commentList, commentCount, num_clusters, centroid_map)   
     train, test = fs2[train_v], fs2[test_v]
     save_numpy_matrix(feature_set_path + "Basic300" + modeltag + "_BOCFeatures" + datatag + "_train", train) 
     save_numpy_matrix(feature_set_path + "Basic300" + modeltag + "_BOCFeatures" + datatag + "_test", test)  
+    '''
     
     print "THREE"
-    fs1 = get_paragraph_features(get_model(10,"DocBasic300" + tag), commentList, commentCount)
+    fs1 = get_paragraph_features(get_model(10,"DocBasic300" + modeltag), commentList, commentCount, comment_data_path + 'news24CommData.txt')
     train, test = fs1[train_v], fs1[test_v]
     save_numpy_matrix(feature_set_path + "DocBasic300" + modeltag + "_ParagraphFeatures" + datatag + "_train", train) 
     save_numpy_matrix(feature_set_path + "DocBasic300" + modeltag + "_ParagraphFeatures" + datatag + "_test", test)   
     
          
     print "FOUR"
-    fs1 = tfidf_weighted_sum_features(get_model(99,"GoogleNews-vectors-negative300"), commentList, commentCount)
+    fs1 = tfidf_weighted_sum_features(get_model(99,"GoogleNews-vectors-negative300.bin"), commentList, commentCount)
     train, test = fs1[train_v], fs1[test_v]
     save_numpy_matrix(feature_set_path + "Google_TfidfFeatures" + datatag + "_train", train) 
     save_numpy_matrix(feature_set_path + "Google_TfidfFeatures" + datatag + "_test", test)      
-       
+      
         
     
     
@@ -444,7 +461,6 @@ if __name__ == '__main__':
     y = load_numpy_matrix(feature_set_path + r'valueVector' + tag + '.npy') 
     sss = StratifiedShuffleSplit(y , 1, test_size=0.40, random_state=42)
     for train, test in sss:
-        print train
         np.save('train_vect', train)
         np.save('test_vect', test)
         y_train = y[train]
@@ -456,29 +472,28 @@ if __name__ == '__main__':
     
 
     train = np.load('train_vect.npy')
-    print train
     
     
    
     
     # Vector Space
-    extractWordData(articleList, commentList, commentCount, tag)
-    extractCharacterData(articleList, commentList, commentCount)
+    #extractWordData(articleList, commentList, commentCount, tag)
+    #extractCharacterData(articleList, commentList, commentCount, tag)
     
     extractTopicModelData(articleList, commentList, commentCount, set_tag, tag)
     
     
     # Deep Learning Extraction
-    extractSaveWordEmbeddingFeatures(commentList, commentCount, set_tag, tag)    
+    #extractSaveWordEmbeddingFeatures(commentList, commentCount, set_tag, tag)    
     # extractSaveSentenceValues(articleList,commentList, parentList,commentCount)
     
     # Classic
-    extractSaveFeatures(articleList,commentList, parentList,commentCount, tag)
-    extractSocialData(articleList, commentList, commentCount, comment_data_path + 'userdata.txt', tag)
+    #extractSaveFeatures(articleList,commentList, parentList,commentCount, tag)
+    #extractSocialData(articleList, commentList, commentCount, comment_data_path + 'userdata.txt', tag)
     
     #extractSaveSlashdotFeatures(articleList, commentList, commentCount)
     #extractSocialData(articleList, commentList, commentCount, comment_data_path + 'slashdotuserdata.txt', tag)
-    
+        
     
     # LDA topics
     #extractTopicModelData(articleList, commentList, commentCount, tag)

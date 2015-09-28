@@ -144,13 +144,8 @@ def extract_values(articleList, commentList, commentCount, type):
                     valueVector[index] = 0 
                 else:
                     valueVector[index] = 0 
-            elif type == 3:
-                if int(comm.score) <=1:
-                    valueVector[index] = 0
-                elif int(comm.score) == 2:
-                    valueVector[index] = 1
-                else:
-                    valueVector[index] = 2
+            elif type == 3: # SLASHDOT
+                valueVector[index] = float(comm.score)
                     
                           
             
@@ -229,7 +224,7 @@ def extract_slashdot_feature_matrix(articleList, commentList, commentCount):
     # Sentiment Classifier
     clf = load_classifier(sentiment_path + 'sentiment_classifier.pickle')
     
-    featureMatrix = np.empty([commentCount,25])
+    featureMatrix = np.empty([commentCount,24])
     
     
     index = 0
@@ -319,7 +314,7 @@ def extract_slashdot_feature_matrix(articleList, commentList, commentCount):
             pronouns = getPN(pf)
                        
                 
-            threadRelevance = onSubForumTopic(tokens, cnt.keys())
+            #threadRelevance = onSubForumTopic(tokens, cnt.keys())
             articleRelevance = onSubForumTopic(tokens, articleCnt.keys())
             
             
@@ -379,16 +374,11 @@ def extract_slashdot_feature_matrix(articleList, commentList, commentCount):
                                              meantermFreq, #17
                                              informativeness, #18
                                              readibility, #19
-                                             threadRelevance, #20
+                                             #threadRelevance, #20
                                              articleRelevance, #21
                                              sentiment, #22
                                              subj_obj, #23
                                              polarity_overlap, #24
-                                             #likes,
-                                             #dislikes,
-                                             #ratio,
-                                             #reports,
-                                             #engagement
                                              ], float) #25
             index += 1
             if index % 100 == 0:
@@ -556,37 +546,32 @@ def extract_feature_matrix(articleList, commentList,  parentList, commentCount):
             '''
             #printValues(comm.author, comm.likeCount, comm.dislikeCount, (comm.likeCount+correction) / (comm.dislikeCount+comm.likeCount+2*correction), commLen, qf, ef, cf, nf, vf, spelled, badWords, complexity, readibility, termFreq, sentiment)
             
-            featureMatrix[index] = np.array([timely, #19
-                                             timePassing, #20
-                                             commLengthiness, #0
-                                             numberCharacters, #24
-                                             vf, #15
-                                             nf, #16
-                                             pronouns,
-                                             cf, #3
-                                             qf, #1
-                                             ef, #2
-                                             scf, #4
-                                             complexity, #10
-                                             diversity, #21
-                                             spelled, #5
-                                             spelledPerc, #6
-                                             badWords, #7
-                                             badWordsPerc, #8
-                                             meantermFreq, #12
-                                             informativeness, #23
-                                             readibility, #11
-                                             threadRelevance, #17
-                                             articleRelevance, #18
-                                             sentiment, #13
-                                             subj_obj, #14
-                                             polarity_overlap, #22
-                                             #likes,
-                                             #dislikes,
-                                             #ratio,
-                                             #reports,
-                                             #engagement
-                                             ], float) #25
+            featureMatrix[index] = np.array([timely, #0
+                                             timePassing, #1
+                                             commLengthiness, #2
+                                             numberCharacters, #3
+                                             vf, #4
+                                             nf, #5
+                                             pronouns, #6
+                                             cf, #7
+                                             qf, #8
+                                             ef, #9
+                                             scf, #10
+                                             complexity, #11
+                                             diversity, #12
+                                             spelled, #13
+                                             spelledPerc, #14
+                                             badWords, #15
+                                             badWordsPerc, #16
+                                             meantermFreq, #17
+                                             informativeness, #18
+                                             readibility, #19
+                                             threadRelevance, #20
+                                             articleRelevance, #21
+                                             sentiment, #22
+                                             subj_obj, #23
+                                             polarity_overlap, #24
+                                             ], float) 
             index += 1
             if index % 100 == 0:
                 print "extracted", index, "features"
@@ -840,6 +825,9 @@ def extract_global_bag_of_words_processed(commentList):
                         
                 # Lemmatize
                 filtered_words = [lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words]  
+                
+                filtered_words = [w for w in filtered_words if len(w) > 1]
+                
                 for word in filtered_words:
                     tokens.append(word)  
             corpus.append(' '.join(tokens))
@@ -1307,7 +1295,7 @@ ENGAGE_MIN = 20 # At least that many total votes
 VOTES_MIN = 0 # At least that many individual votes
 MIN_THREAD_LENGTH = 20 # Threads at least that long
 
-def read_comments(filename, skip=True):
+def read_comments(filename, skip=True, skip_mtn=False, limit = -1):
     f = open(filename, 'r')        
         
     # To process all the comments
@@ -1365,11 +1353,12 @@ def read_comments(filename, skip=True):
             if len(comm.words) < WORD_MIN:
                 lessThanCount += 1
                 continue
-            '''
-            if "mtn" in comm.body.lower():
+            
+        if skip_mtn:
+            if "mtn" in comm.body.lower() or "honda" in comm.body.lower() or "toyota" in comm.body.lower() or "form" in comm.body.lower() or "camry" in comm.body.lower()  or "service" in comm.body.lower() :
                 mtnCount += 1
                 continue
-            '''
+            
         article = ArticleObject.ArticleObject(CO_id, articleTitle, articleSynopsis, "")
 
 
@@ -1388,6 +1377,9 @@ def read_comments(filename, skip=True):
         commentCount += 1
         if commentCount % 10000 == 0:
             print "Read", commentCount, "comments"
+        
+        if commentCount == limit:
+            break
     
     '''
     commentCount = 0

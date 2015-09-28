@@ -8,14 +8,18 @@ import os
 import re
 import string
 
+from FeatureExtraction.LexicalFeatures import penn_to_wn
 from gensim.models.doc2vec import Doc2Vec, LabeledSentence, TaggedDocument
 from gensim.models.phrases import Phrases
 from gensim.models.word2vec import Word2Vec
 from mainExtractor import read_comments
 import nltk
 from nltk.corpus import stopwords
+from nltk.stem.wordnet import WordNetLemmatizer
 from sklearn.manifold.t_sne import TSNE
+from textblob.blob import Blobber
 from textblob.tokenizers import SentenceTokenizer
+from textblob_aptagger.taggers import PerceptronTagger
 
 from config import model_path, comment_data_path
 import matplotlib.pyplot as plt
@@ -47,13 +51,37 @@ def comment_to_chunked_wordlist(line):
     return words
 
 
+lemmatizer = WordNetLemmatizer()    
+tb = Blobber(pos_tagger=PerceptronTagger())
+sentencer = SentenceTokenizer()
+    
+
+def comment_to_words_for_topics(comment_body):  
+     
+    tokens = []
+    for sent in sentencer.tokenize(comment_body.decode('ascii','ignore')):
+        tagged = tb(sent.lower()).tags            
+        filtered_words = [w for w in tagged if not w[0] in stopwords.words('english')]
+        # Remove punctuation
+        filtered_words = [(re.findall('[a-z]+', w[0].lower())[0], w[1]) for w in filtered_words if len(re.findall('[a-z]+', w[0].lower())) > 0]             
+                
+        # Lemmatize
+        filtered_words = [lemmatizer.lemmatize(w[0], penn_to_wn(w[1])) for w in filtered_words if len(w[0]) > 1]  
+        
+        tokens += filtered_words
+            
+    return tokens
+                
 
 def comment_to_wordlist(line, remove_stops=False):
     text = re.sub("[^a-zA-Z]", " ", line )
     words = text.split(" ")
+    
     if remove_stops:
         words = [w for w in words if not w in stops and len(w) >0]
         
+    
+            
     words = [w.lower() for w in words if len(w) > 0]
     return words
         
@@ -86,16 +114,6 @@ class LabeledLineSentence(object):
             body = line.split("|")[1]
             uid = line.split("|")[0]
             yield LabeledSentence(comment_to_wordlist(body), [uid])
-    def to_array(self):
-        self.sentences = []
-        for line in open(self.filename):
-            body = line.split("|")[1]
-            uid = line.split("|")[0]
-            self.sentences.append(LabeledSentence(comment_to_wordlist(body), [uid]))
-        return self.sentences
-    
-    def sentences_perm(self):
-        return np.random.permutation(self.sentences)
 
 
 # Set values for various parameters
@@ -117,9 +135,9 @@ def train_model(model_type, model_name, filename):
         
         model = Doc2Vec(alpha=0.025, min_alpha=0.025, workers=num_workers, size=num_features, min_count=1, sample=downsampling)
         sentences = LabeledLineSentence(filename)
-        model.build_vocab(sentences.to_array())
+        model.build_vocab(sentences)
         for epoch in range(5):
-            model.train(sentences.sentences_perm())
+            model.train(sentences)
             model.alpha -= 0.002
             model.min_alpha = model.alpha
         

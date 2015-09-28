@@ -4,24 +4,30 @@ Created on 05 Mar 2015
 @author: Dirk
 '''
 from _collections import defaultdict
+from collections import Counter
 from decimal import Decimal
 import math
 import re
 from time import strptime
 
+from gensim.models.doc2vec import LabeledSentence
 import nltk
 from nltk.cluster.util import cosine_distance
+from nltk.probability import FreqDist
 from nltk.stem import WordNetLemmatizer
 from numpy import dtype
 from scipy.cluster.vq import kmeans, vq
 from sklearn.cluster import dbscan_
 from sklearn.cluster.dbscan_ import DBSCAN
 from sklearn.cluster.k_means_ import KMeans
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_distances
 from textblob.tokenizers import SentenceTokenizer
 
-from DeepLearnings.ModelTraining import get_model, comment_to_wordlist
+from DeepLearnings.ModelTraining import get_model, comment_to_wordlist,\
+    LabeledLineSentence
 from Objects import CommentObject, ArticleObject
+from config import comment_data_path
 import numpy as np
 
 
@@ -84,17 +90,22 @@ def make_feature_vec(words, model, num_features):
             feature_vec
 
 
-def get_paragraph_features(model, commentList, commentCount):
+ 
+def get_paragraph_features(model, commentList, commentCount, filepath):    
+    vects = model.docvecs
+    
     M = model.syn0.shape[1]
     N = getCommentCount(commentList)
     feature_matrix = np.empty((N,M), dtype="float32")
     index = 0 
     for commList in commentList.values():
         for comm in commList:
-            feature_matrix[index] = model[comm.id]
+            feature_matrix[index] = vects[comm.id]
             index += 1
             if index % 1000 == 0:
                 print index, "document vectors retrieved"
+    
+    return feature_matrix
     
 def tfidf_weighted_sum_features(model, commentList, commentCount): 
     M = model.syn0.shape[1]
@@ -232,27 +243,41 @@ def min_max_mean_features(model_type, commentList, commentCount):
 def train_clusterer(model, commentList):  
     
     count = 0
+    corpus = []
+    words = []
     index2word_set = set(model.index2word)
     for commList in commentList.values():
         for comm in commList:      
+            tokens = []
             for word in comment_to_wordlist(comm.body, True):
-                if word in index2word_set:
+                if word in index2word_set:  
+                    tokens.append(word)  
+                    words.append(word)                
                     count += 1
-                    
-    print count           
-    word_vectors = np.zeros((count, 300))
+            corpus.append(' '.join(tokens))
+    
+    fdist1 = FreqDist(words)   
+    most_common = [item[0] for item in fdist1.most_common(10)]
+    uniques = Counter(words).keys()
+    print fdist1
+    print len(most_common)
+    print len(uniques)
+    wordlist = [item for item in uniques if item not in most_common]
+    N = len(wordlist)
+    print N
+                  
+    word_vectors = np.zeros((N, 200))
     i = 0
-    for commList in commentList.values():
-        for comm in commList:      
-            for word in comment_to_wordlist(comm.body, True):
-                if word in index2word_set:
-                    word_vectors[i] = model[word]
-                    i += 1
+    for word in wordlist:
+        if word not in most_common:
+            word_vectors[i] = model[word]
+            i += 1
     
     
     
-    num_clusters = word_vectors.shape[0] / 20
+    num_clusters = word_vectors.shape[0] / 10
     print word_vectors.shape
+    print num_clusters
     
     # Initalize a k-means object and use it to extract centroids
     #idx = KMeans( n_clusters = num_clusters).fit_predict( word_vectors )

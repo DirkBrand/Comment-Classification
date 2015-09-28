@@ -13,22 +13,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-#articleList, commentList, commentCount = read_slashdot_comments(comment_data_path + 'slashdotDataSet.txt')
-articleList, commentList, parList, commentCount = read_toy_comments(comment_data_path + 'trainTestDataSet.txt', comment_data_path + 'toyComments.csv')
-labels = []
+articleList, commentList, commentCount = read_slashdot_comments(comment_data_path + 'slashdotDataSet.txt', skip=False)
+#articleList, commentList, parList, commentCount = read_toy_comments(comment_data_path + 'trainTestDataSet.txt', comment_data_path + 'toyComments.csv')
+labels = dict()
+labels[-1],labels[0],labels[1],labels[2],labels[3],labels[4],labels[5] = 0,0,0,0,0,0,0
 i = 0
 for art in commentList.items():        
     for comm in art[1]:
-        labels.append(comm.rating)
+        labels[int(comm.score)] += 1
         i += 1
         if i % 1000 == 0:
             print i
             
-dist = Counter(labels)
-print "Class distribution:", dist
+print "Class distribution:", labels
 
-keys = dist.keys()
+keys = labels.keys()
 keys.sort()
+values = []
+values.append(labels[-1])
+values.append(labels[0])
+values.append(labels[1])
+values.append(labels[2])
+values.append(labels[3])
+values.append(labels[4])
+values.append(labels[5])
+
 
 pos = np.arange(len(keys))
 width = 0.25     # gives histogram aspect to the bar diagram
@@ -36,11 +45,11 @@ ax = plt.axes()
 ax.set_xticks(pos + (width / 2))
 ax.set_xticklabels(keys)
 
-plt.bar(pos, dist.values(), width, color='b')
+plt.bar(pos, values, width, color='b')
 plt.xlim([min(pos) - 0.5, max(pos) + 0.5])
 plt.xlabel("Rating")
 plt.ylabel("Number of Comments")
-plt.savefig(r'Images\toydistribution.png', bbox_inches='tight')
+plt.savefig(r'Images\slashdotdistribution.png', bbox_inches='tight')
 
 '''
 plt.hist(, bins=dist.keys())

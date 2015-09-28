@@ -32,7 +32,7 @@ import numpy as np
 
 
 VALUES = [ 'totalVotes', 'percentage of total','ratio','Status']
-FEATURES = [ 'CF', 'BTF','FTF','TTF', 'BBTF', 'BTTF', 'TBTF', 'TTTF', 'QBTF', 'QTTF', 'BiOnlyBi','BiOnlyTFIDF', 'TriOnlyBi', 'TriOnlyTFIDF','QuadOnlyBi','QuadOnlyTFIDF', 'binaryChar', 'tfidfChar', 'binaryLexicalBigrams', 'tfidfLexicalBigrams',  'SL-MMM', 'SL-TWS', 'SL-BOC', 'POS-MMM', 'POS-TWS', 'POS-BOC', 'BG-MMM', 'BG-TWS', 'BG-BOC', 'Google-MMM', 'Google-TWS', 'Google-BOC']
+FEATURES = [ 'CF', 'BTF','FTF','TTF', 'BBTF', 'BTTF', 'TBTF', 'TTTF', 'QBTF', 'QTTF', 'BiOnlyBi','BiOnlyTFIDF', 'TriOnlyBi', 'TriOnlyTFIDF','QuadOnlyBi','QuadOnlyTFIDF', 'binaryChar', 'tfidfChar', 'binary skipgram', 'tfidf skipgram',  'LDA', 'word2vec tfidf','doc2vec','google tfidf']
             
 
 
@@ -128,37 +128,37 @@ def runClassificationTest(X, y, model, featureset, datatype):
     gamma=0
     if datatype==1:
         if featureset == 0: #Custom Features
-            C = 100000
+            C = 10000
             Lc = 10000
-            gamma = 10.0
+            gamma = 1.0
         if featureset == 1: #Binary word Features
             C = 10
             Lc = 1
-            gamma = 0.071968567300115208
+            gamma = 0.1
         if featureset == 2: #Freq Word Features
             C = 10
             Lc = 1
-            gamma = 0.071968567300115208      
+            gamma = 0.01 
         if featureset == 3: #TFIDF word Features
             C =10
             Lc = 1
-            gamma = 0.071968567300115208 
+            gamma = 0.1
         if featureset == 4: #Bigram binary word Features
+            C = 10
+            Lc = 0.01
+            gamma = 0.01
+        if featureset == 5: #Bigram tfidf word Features
+            C = 1000
+            Lc = 10
+            gamma = 0.01
+        if featureset == 6: #Trigram binary word Features
             C = 100
             Lc = 0.1
-            gamma = 0.0026826957952797272
-        if featureset == 5: #Bigram tfidf word Features
-            C = 100
-            Lc = 10
-            gamma = 0.013894954943731374
-        if featureset == 6: #Trigram binary word Features
-            C = 10000
-            Lc = 1
-            gamma = 0.01
+            gamma = 0.001
         if featureset == 7: #Trigram tfidf word Features
-            C = 10
+            C = 1000
             Lc = 10
-            gamma = 0.1
+            gamma = 0.01
         if featureset == 8: #Quadgram binary word Features
             C = 10
             Lc = 0.1
@@ -168,23 +168,21 @@ def runClassificationTest(X, y, model, featureset, datatype):
             Lc = 10
             gamma = 0.37275937203149417
         if featureset == 10: #Bigram ONLY binary word Features
-            C = 100
-            Lc = 1
-            gamma = 0.0005179474679231213
-        if featureset == 11: #Bigram ONLY tfidf word Features
-            C = 10
-            Lc = 1
-            gamma = 0.071968567300115208
-        if featureset == 12: #Triigram ONLY binary word Features
-            C = 1
-            Lc = 10
-            gamma = 0.071968567300115208
-        if featureset == 13: #Triigram ONLY tfidf word Features
-            C1 = 1.0
             C = 100000
             Lc = 10
-            gamma1 = 0.071968567300115208
-            gamma = 0.0001
+            gamma = 0.1
+        if featureset == 11: #Bigram ONLY tfidf word Features
+            C = 100
+            Lc = 10
+            gamma = 0.01
+        if featureset == 12: #Triigram ONLY binary word Features
+            C = 100
+            Lc = 0.1
+            gamma = 0.001
+        if featureset == 13: #Triigram ONLY tfidf word Features
+            C = 10
+            Lc = 1
+            gamma = 0.1
         if featureset == 14: #Quadgram ONLY binary word Features
             C = 1
             Lc = 10
@@ -194,119 +192,199 @@ def runClassificationTest(X, y, model, featureset, datatype):
             Lc = 1000
             gamma = 0.013894954943731374
         if featureset == 16: #Binary Character Features
-            C = 1000 # 0.837
-            Lc = 10
-            gamma = 0.001
+            C = 100 
+            Lc =  0.001
+            gamma = 0.0001
         if featureset == 17: #TFDIF Character Features
-            C = 1000 # 0.879
-            Lc = 10 # 0.807
-            gamma = 0.01
+            C = 100000 
+            Lc = 1000 
+            gamma = 0.001
         if featureset == 18: #Binary character skipgram Features
-            C = 1000 #0.764
-            Lc = 10#0.764
-            gamma =0.001
+            C = 10 
+            Lc = 0.01
+            gamma =10
         if featureset == 19: #TFIDF character skipgram Features
-            C = 1000 #0.764
-            Lc = 10#0.764
-            gamma =0.001
-        if featureset == 20: #Binary Lexical Bigram Unigram Features
-            C = 100000 #0.764
-            Lc = 100#0.764
-            gamma =0.001
-        if featureset == 21: #TFIDF Lexical Bigram Unigram Features
-            C = 1000000
-            Lc = 1000
-            gamma = 0.013894954943731374
+            C = 100 
+            Lc = 1 
+            gamma =1
+        if featureset == 20: #LDA Features
+            C = 1 
+            Lc = 1 
+            gamma = 10
+        if featureset == 21: # Basic300 tfidf
+            C = 1
+            gamma = 0.0001
+            Lc = 10
+        if featureset == 22: # DocBasic300 
+            C = 1
+            gamma = 10
+            Lc = 0.1
+        if featureset == 23: # Google tfidf
+            C = 1
+            gamma = 0.001
+            Lc = 10
     elif datatype==2: # TOY
+        if featureset == 0: 
+            C = 10000000
+            Lc = 10000
+            gamma = 0.0001
         if featureset == 1:
-            C = 1000
-            gamma = 0.001
-            Lc = 10
+            C = 100000
+            gamma = 0.000001
+            Lc = 1
         if featureset == 2:
-            C = 100
-            gamma = 0.605
-            Lc = 10
+            C = 100000
+            gamma = 0.1
+            Lc = 1
         if featureset == 3:
             C = 1000
-            gamma = 0.001
+            gamma = 0.0001
             Lc = 1
         if featureset == 4:
-            C = 1
-            gamma = 0.01
+            C = 1000000
+            gamma = 0.000001
             Lc = 1
         if featureset == 5:
-            C = 1
-            gamma = 0.01
+            C = 1000000
+            gamma = 0.000001
             Lc = 1
         if featureset == 6:
-            C = 1
-            gamma = 0.01
+            C = 10
+            gamma = 0.001
             Lc = 1
         if featureset == 7:
-            C = 1
-            gamma = 0.01
+            C = 10
+            gamma = 0.001
             Lc = 1
         if featureset == 10:
-            C = 1
-            gamma = 0.01
+            C = 1000000
+            gamma = 0.000001
             Lc = 1
         if featureset == 11:
-            C = 1
-            gamma = 0.01
+            C = 1000000
+            gamma = 0.000001
             Lc = 1
         if featureset == 12:
-            C = 1
-            gamma = 0.01
+            C = 100000
+            gamma = 0.00001
             Lc = 1
         if featureset == 13:
-            C = 1
-            gamma = 0.01
+            C = 100000
+            gamma = 0.00001
             Lc = 1
+        if featureset == 16:
+            C = 100
+            gamma = 0.0001
+            Lc = 0.010
+        if featureset == 17:
+            C = 1000
+            gamma = 0.00001
+            Lc = 0.01
+        if featureset == 18:
+            C = 100
+            gamma = 0.001
+            Lc = 0.1
+        if featureset == 19:
+            C = 10000
+            gamma = 0.00001
+            Lc = 0.1
+        if featureset == 20:
+            C = 10000
+            gamma = 0.1
+            Lc = 1
+        if featureset == 21:
+            C = 1
+            gamma = 10
+            Lc = 0.1
+        if featureset == 22:
+            C = 1
+            gamma = 10
+            Lc = 1
+        if featureset == 23:
+            C = 1
+            gamma = 10
+            Lc = 10
     elif datatype==3: # SLASHDOT
-        if featureset == 1:
+        if featureset == 0:
             C = 1000
-            gamma = 0.001
-            Lc = 10
-        if featureset == 2:
-            C = 100
-            gamma = 0.605
-            Lc = 10
-        if featureset == 3:
-            C = 1000
-            gamma = 0.001
-            Lc = 1
-        if featureset == 4:
-            C = 1
             gamma = 0.01
+            Lc = 10
+        if featureset == 1:
+            C = 100
+            gamma = 0.001
+            Lc = 0.1
+        if featureset == 2:
+            C = 10000
+            gamma = 0.00001
+            Lc = 0.1
+        if featureset == 3:
+            C = 100
+            gamma = 0.001
+            Lc = 0.1
+        if featureset == 4:
+            C = 1000000
+            gamma = 0.000001
             Lc = 1
         if featureset == 5:
-            C = 1
-            gamma = 0.01
-            Lc = 1
+            C = 100000
+            gamma = 0.000001
+            Lc = 0.1
         if featureset == 6:
-            C = 1
+            C = 10
             gamma = 0.01
             Lc = 1
         if featureset == 7:
-            C = 1
+            C = 10
             gamma = 0.01
-            Lc = 1
+            Lc = 0.1
         if featureset == 10:
-            C = 1
-            gamma = 0.01
+            C = 10
+            gamma = 0.1
             Lc = 1
         if featureset == 11:
-            C = 1
-            gamma = 0.01
+            C = 10
+            gamma = 0.1
             Lc = 1
         if featureset == 12:
-            C = 1
-            gamma = 0.01
+            C = 10
+            gamma = 0.1
             Lc = 1
         if featureset == 13:
-            C = 1
+            C = 10
+            gamma = 0.1
+            Lc = 10
+        if featureset == 16:
+            C = 1000
             gamma = 0.01
             Lc = 1
+        if featureset == 17:
+            C = 10
+            gamma = 0.01
+            Lc = 0.1
+        if featureset == 18:
+            C = 1000
+            gamma = 0.00001
+            Lc = 0.01
+        if featureset == 19:
+            C = 1
+            gamma = 0.001
+            Lc = 0.1
+        if featureset == 20:
+            C = 10
+            gamma = 1000
+            Lc = 10
+        if featureset == 21:
+            C = 1
+            gamma = 10
+            Lc = 0.1
+        if featureset == 22:
+            C = 1
+            gamma = 10
+            Lc = 1
+        if featureset == 23:
+            C = 1
+            gamma = 10
+            Lc = 10
         
            
     if model == 1:
@@ -361,14 +439,19 @@ def normalize_sets_dense (train, test):
 
 reg = False
 scale = True
-datatype = 1
-tag = '_main'
-#tag = "_toy"
-#tag = '_slashdot'
+datatype = 3
+
   
 if __name__ == '__main__':
+    if datatype == 1:
+        tag = '_main'
+    elif datatype == 2:
+        tag = "_toy"
+    elif datatype == 3:
+        tag = '_slashdot'
     
-    for featureV in [1,2,3,4,5,6,7,10,11,12,13]:          
+    for featureV in [0,1,2,3,4,5,6,7,10,11,12,13,16,17,18,19,20]: 
+    #for featureV in [21,22,23]:          
         y_train = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_train.npy')
         y_test = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_test.npy')
         
@@ -379,7 +462,7 @@ if __name__ == '__main__':
             X_test = load_numpy_matrix(feature_set_path +  r'featureArray'+tag+'_test.npy')
             sd2 = load_numpy_matrix(feature_set_path +  r'socialVector'+tag+'_test.npy')
             X_test =  np.hstack((X_test,sd2))
-            perc = 50
+            perc = 80
         elif featureV == 1:
             X_train = load_sparse_csr(feature_set_path +  r'binaryWordData'+tag+'_train.npz')  
             X_test = load_sparse_csr(feature_set_path +  r'binaryWordData'+tag+'_test.npz')  
@@ -427,50 +510,39 @@ if __name__ == '__main__':
             X_test = load_sparse_csr(feature_set_path +  r'quadgramOnlyTfidfWordData'+tag+'_test.npz') 
             
         elif featureV == 16:
-            X_train = load_sparse_csr(feature_set_path +  r'binaryCharacterData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'binaryCharacterData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'binaryCharacterData' + tag + '_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'binaryCharacterData' + tag + '_test.npz') 
         elif featureV == 17:
-            X_train = load_sparse_csr(feature_set_path +  r'tfidfCharacterData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'tfidfCharacterData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'tfidfCharacterData' + tag + '_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'tfidfCharacterData' + tag + '_test.npz') 
         elif featureV == 18:
-            X_train = load_sparse_csr(feature_set_path +  r'binaryCharacterSkipgramData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'binaryCharacterSkipgramData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'binaryCharacterSkipgramData' + tag + '_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'binaryCharacterSkipgramData' + tag + '_test.npz') 
         elif featureV == 19:
-            X_train = load_sparse_csr(feature_set_path +  r'tfidfCharacterSkipgramData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'tfidfCharacterSkipgramData_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'tfidfCharacterSkipgramData' + tag + '_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'tfidfCharacterSkipgramData' + tag + '_test.npz') 
         elif featureV == 20:
-            X_train = load_sparse_csr(feature_set_path +  r'binaryLexicalBigramsData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'binaryLexicalBigramsData_test.npz') 
+            #X_train = load_sparse_csr(feature_set_path +  r'_news24lda' + tag + '_train.npz') 
+            #X_test = load_sparse_csr(feature_set_path +  r'_news24lda' + tag + '_test.npz') 
+            X_train = load_sparse_csr(feature_set_path +  r'_slashdotlda' + tag + '_train.npz') 
+            X_test = load_sparse_csr(feature_set_path +  r'_slashdotlda' + tag + '_test.npz') 
         elif featureV == 21:
-            X_train = load_sparse_csr(feature_set_path +  r'tfidfLexicalBigramsData_train.npz') 
-            X_test = load_sparse_csr(feature_set_path +  r'tfidfLexicalBigramsData_test.npz') 
+            X_train = load_numpy_matrix(feature_set_path + "Basic300_news24_TfidfFeatures" + tag + "_train.npy")
+            X_test = load_numpy_matrix(feature_set_path + "Basic300_news24_TfidfFeatures" + tag + "_test.npy")
+            #X_train = load_numpy_matrix(feature_set_path + "Basic300_slashdot_TfidfFeatures" + tag + "_train.npy")
+            #X_test = load_numpy_matrix(feature_set_path + "Basic300_slashdot_TfidfFeatures" + tag + "_test.npy")
+        elif featureV == 22:
+            X_train = load_numpy_matrix(feature_set_path + "DocBasic300_news24_ParagraphFeatures" + tag + "_train.npy")
+            X_test = load_numpy_matrix(feature_set_path + "DocBasic300_news24_ParagraphFeatures" + tag + "_test.npy")
+            #X_train = load_numpy_matrix(feature_set_path + "DocBasic300_slashdot_ParagraphFeatures" + tag + "_train.npy")
+            #X_test = load_numpy_matrix(feature_set_path + "DocBasic300_slashdot_ParagraphFeatures" + tag + "_test.npy")
+        elif featureV == 23:
+            X_train = load_numpy_matrix(feature_set_path + "Google_TfidfFeatures" + tag + "_train.npy")
+            X_test = load_numpy_matrix(feature_set_path + "Google_TfidfFeatures" + tag + "_test.npy")
+            
             
              
-            '''
-        elif featureV == 11:
-            X = load_numpy_matrix(feature_set_path +  r'sentence_model_MinMaxMeanFeatures.npy')  
-        elif featureV == 11:
-            X = load_numpy_matrix(feature_set_path +  r'sentence_model_TfidfWeightedSumFeatures.npy')  
-        elif featureV == 12:
-            X = load_numpy_matrix(feature_set_path +  r'sentence_model_BagOfCentroidsFeatures.npy')   
-        elif featureV == 13:
-            X = load_numpy_matrix(feature_set_path +  r'POS_model_MinMaxMeanFeatures.npy')       
-        elif featureV == 14:
-            X = load_numpy_matrix(feature_set_path +  r'POS_model_TfidfWeightedSumFeatures.npy')       
-        elif featureV == 15:
-            X = load_numpy_matrix(feature_set_path +  r'POS_model_BagOfCentroidsFeatures.npy')    
-        elif featureV == 16:
-            X = load_numpy_matrix(feature_set_path +  r'bigram_model_MinMaxMeanFeatures.npy')       
-        elif featureV == 17:
-            X = load_numpy_matrix(feature_set_path +  r'bigram_model_TfidfWeightedSumFeatures.npy')       
-        elif featureV == 18:
-            X = load_numpy_matrix(feature_set_path +  r'bigram_model_BagOfCentroidsFeatures.npy')      
-        elif featureV == 19:
-            X = load_numpy_matrix(feature_set_path +  r'google_model_MinMaxMeanFeatures.npy')      
-        elif featureV == 20:
-            X = load_numpy_matrix(feature_set_path +  r'google_model_TfidfWeightedSumFeatures.npy')  
-        '''
-        
+          
         
         # Reduce Dataset
         '''
@@ -483,12 +555,18 @@ if __name__ == '__main__':
         print "\nFeatures",FEATURES[featureV]
         print '\nTotal:', X_train.shape[0] + X_test.shape[0] 
         print 'Features:', X_train.shape[1]   
-        print "\nClass distribution %.3f" %(np.sum(y_train)/X_train.shape[0])
+        print "\nClass distribution", Counter(y_train)
         
             
         # FEATURE SELECT
-        #selector =  SelectPercentile(score_func=f_classif, percentile=perc).fit(X_train, y_train)
-        selector = SelectKBest(score_func=chi2, k=min(200000, X_train.shape[1])).fit(X_train,y_train)
+        if featureV == 0:
+            selector =  SelectPercentile(score_func=f_classif, percentile=perc).fit(X_train, y_train)
+        else:
+            if featureV == 21 or featureV == 22 or featureV == 23:
+                selector = SelectKBest(score_func=f_classif, k=min(200000, X_train.shape[1])).fit(X_train,y_train)
+            else:                
+                selector = SelectKBest(score_func=chi2, k=min(200000, X_train.shape[1])).fit(X_train,y_train)
+        
         X_train = selector.transform(X_train)
         X_test = selector.transform(X_test)
         
@@ -499,10 +577,11 @@ if __name__ == '__main__':
     
         # FEATURE SCALING   
          
-        if featureV > 0:
-            X_train, X_test = normalize_sets_sparse(X_train, X_test)
-        else:
+        if featureV == 0 or featureV == 21 or featureV == 22 or featureV == 23:
             X_train, X_test = normalize_sets_dense(X_train, X_test)
+        elif featureV != 20:
+            X_train, X_test = normalize_sets_sparse(X_train, X_test)
+           
         
         #Xn = preprocessing.normalize(Xn, axis=0, copy=False)
         
