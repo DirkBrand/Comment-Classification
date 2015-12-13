@@ -25,8 +25,7 @@ twitter_data = os.path.join(POLARITY_DATA_DIR, 'training.1600000.processed.noemo
 RT_POLARITY_POS_FILE = os.path.join(POLARITY_DATA_DIR, 'rt-polarity-pos.txt')
 RT_POLARITY_NEG_FILE = os.path.join(POLARITY_DATA_DIR, 'rt-polarity-neg.txt')
 
-def load_classifier(filename):
-    
+def load_classifier(filename): 
     
     f = open(filename)
     classifier = pickle.load(f)

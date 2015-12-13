@@ -439,7 +439,7 @@ def normalize_sets_dense (train, test):
 
 reg = False
 scale = True
-datatype = 3
+datatype = 1
 
   
 if __name__ == '__main__':
@@ -450,7 +450,7 @@ if __name__ == '__main__':
     elif datatype == 3:
         tag = '_slashdot'
     
-    for featureV in [0,1,2,3,4,5,6,7,10,11,12,13,16,17,18,19,20]: 
+    for featureV in [1]: 
     #for featureV in [21,22,23]:          
         y_train = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_train.npy')
         y_test = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_test.npy')

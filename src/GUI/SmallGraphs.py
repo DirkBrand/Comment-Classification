@@ -15,12 +15,16 @@ import numpy as np
 
 articleList, commentList, commentCount = read_slashdot_comments(comment_data_path + 'slashdotDataSet.txt', skip=False)
 #articleList, commentList, parList, commentCount = read_toy_comments(comment_data_path + 'trainTestDataSet.txt', comment_data_path + 'toyComments.csv')
-labels = dict()
-labels[-1],labels[0],labels[1],labels[2],labels[3],labels[4],labels[5] = 0,0,0,0,0,0,0
+labels_anon = dict()
+labels_anon[-1],labels_anon[0],labels_anon[1],labels_anon[2],labels_anon[3],labels_anon[4],labels_anon[5] = 0,0,0,0,0,0,0
+labels_not_anon = dict()
+labels_not_anon[-1],labels_not_anon[0],labels_not_anon[1],labels_not_anon[2],labels_not_anon[3],labels_not_anon[4],labels_not_anon[5] = 0,0,0,0,0,0,0
+
+
 i = 0
 for art in commentList.items():        
     for comm in art[1]:
-        labels[int(comm.score)] += 1
+        labels_anon[int(comm.score)] += 1
         i += 1
         if i % 1000 == 0:
             print i

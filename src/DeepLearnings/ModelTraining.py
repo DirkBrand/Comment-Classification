@@ -12,7 +12,6 @@ from FeatureExtraction.LexicalFeatures import penn_to_wn
 from gensim.models.doc2vec import Doc2Vec, LabeledSentence, TaggedDocument
 from gensim.models.phrases import Phrases
 from gensim.models.word2vec import Word2Vec
-from mainExtractor import read_comments
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer

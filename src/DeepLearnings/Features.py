@@ -91,25 +91,33 @@ def make_feature_vec(words, model, num_features):
 
 
  
-def get_paragraph_features(model, commentList, commentCount, filepath):    
+def get_paragraph_features(model, df_comments):    
     vects = model.docvecs
     
     M = model.syn0.shape[1]
-    N = getCommentCount(commentList)
-    feature_matrix = np.empty((N,M), dtype="float32")
+    N = df_comments.shape[0]
+    feature_matrix = np.empty([N,M], dtype="float32")
     index = 0 
-    for commList in commentList.values():
-        for comm in commList:
-            feature_matrix[index] = vects[comm.id]
-            index += 1
-            if index % 1000 == 0:
-                print index, "document vectors retrieved"
+    skipped = 0
+    for _,row in df_comments.iterrows():
+        comm_id = row['comment_id']
+        if vects[comm_id].shape[0] != M:
+            feature_matrix[index] = [0]*M
+            skipped += 1
+        else:            
+            feature_matrix[index] = vects[comm_id]
+            
+        index += 1
+        if index % 1000 == 0:
+            print index, "document vectors retrieved"
+    
+    print skipped, 'Skipped comments'
     
     return feature_matrix
     
-def tfidf_weighted_sum_features(model, commentList, commentCount): 
+def tfidf_weighted_sum_features(model, df_comments): 
     M = model.syn0.shape[1]
-    N = getCommentCount(commentList)
+    N = df_comments.shape[0]
     feature_matrix = np.empty((N,M), dtype="float32")
     
     index = 0  
@@ -119,35 +127,35 @@ def tfidf_weighted_sum_features(model, commentList, commentCount):
     global_body=[]
     
     # Create bag of words for comment
-    for commList in commentList.values():
-        for comm in commList:
-            global_body += comment_to_wordlist(comm.body, True)
+    for _,row in df_comments.iterrows():
+        comm = row['comment_content']
+        global_body += comment_to_wordlist(comm, True)
             
     global_freq_dist = nltk.FreqDist(global_body)
     
     IN_COUNT = 1
     OUT_COUNT = 1
-    for commList in commentList.values():
-        for comm in commList:
-            sum = np.zeros((M,), dtype="float32")
-            clean_comm = comment_to_wordlist(comm.body, True)
-            fdist = nltk.FreqDist(clean_comm)
-            for word in clean_comm:                
-                tf = 0.5 + 0.5*float(fdist[word])/np.max(fdist.values())
-                count = global_freq_dist[word]                        
-            
-                idf = math.log(N / float(1+count))
-                if word in index2word_set:
-                    #print "IN - ", word
-                    IN_COUNT += 1
-                    # TFIDF weighted vector
-                    sum += tf * idf * model[word]
-                else:
-                    #print "OUT - ", word
-                    OUT_COUNT += 1
-            feature_matrix[index] = sum
-            index += 1
-    
+    for _,row in df_comments.iterrows():
+        comm = row['comment_content']
+        sum = np.zeros((M,), dtype="float32")
+        clean_comm = comment_to_wordlist(comm, True)
+        fdist = nltk.FreqDist(clean_comm)
+        for word in clean_comm:                
+            tf = 0.5 + 0.5*float(fdist[word])/np.max(fdist.values())
+            count = global_freq_dist[word]                        
+        
+            idf = math.log(N / float(1+count))
+            if word in index2word_set:
+                #print "IN - ", word
+                IN_COUNT += 1
+                # TFIDF weighted vector
+                sum += tf * idf * model[word]
+            else:
+                #print "OUT - ", word
+                OUT_COUNT += 1
+        feature_matrix[index] = sum
+        index += 1
+
   
     print IN_COUNT, 'words found'
     print OUT_COUNT, 'words not found'
@@ -241,6 +249,8 @@ def min_max_mean_features(model_type, commentList, commentCount):
     return feature_matrix  
   
 def train_clusterer(model, commentList):  
+    
+    
     
     count = 0
     corpus = []

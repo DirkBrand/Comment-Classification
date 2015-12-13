@@ -21,12 +21,12 @@ import pandas as pd
 
 def svc_fit(X,y,kernel, C, gamma ):
     
-    clf = svm.SVC(C=C, gamma=gamma, kernel=kernel, class_weight='auto', cache_size=1000, verbose=True, max_iter=250000)
+    clf = svm.SVC(C=C, gamma=gamma, kernel=kernel, cache_size=1000, max_iter=250000)
     print clf
     return clf.fit(X, y)
 
 def linear_svc_fit(X,y,C):
-    clf = svm.SVC(kernel='linear', C=C, verbose=True, class_weight='auto', cache_size=1000, max_iter=250000)   
+    clf = svm.SVC(kernel='linear', C=C, verbose=True, cache_size=1000, max_iter=250000)   
     print clf          
     return clf.fit(X, y)
 

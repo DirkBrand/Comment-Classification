@@ -1,3 +1,17 @@
+
+import operator
+
+from FeatureExtraction.main import load_sparse_csr, load_numpy_matrix
+from sklearn import preprocessing
+from sklearn.cross_validation import cross_val_score
+from sklearn.lda import LDA
+from sklearn.linear_model import LinearRegression
+from sklearn.svm.classes import SVR
+
+from RatingPrediction.main import normalize_sets_sparse
+from config import feature_set_path
+import numpy as np
+
 names=[
 'timely', #0
 'timePassing', #1
@@ -34,24 +48,18 @@ names=[
 'Auth']
 
 
-import operator
-
-from FeatureExtraction.main import load_sparse_csr, load_numpy_matrix
-from sklearn.cross_validation import cross_val_score
-from sklearn.lda import LDA
-from sklearn.linear_model import LinearRegression
-from sklearn.svm.classes import SVR
-
-from RatingPrediction.main import normalize_sets_sparse
-from config import feature_set_path
-import numpy as np
 
 
-tag='_main'
+
+
+tag='_toy'
 
 
 X_train = load_numpy_matrix(feature_set_path +  r'featureArray'+tag+'_train.npy')
 sd = load_numpy_matrix(feature_set_path +  r'socialVector'+tag+'_train.npy')
+print X_train.shape
+print sd.shape
+
 X_train =  np.hstack((X_train,sd))
 X_test = load_numpy_matrix(feature_set_path +  r'featureArray'+tag+'_test.npy')
 sd2 = load_numpy_matrix(feature_set_path +  r'socialVector'+tag+'_test.npy')
@@ -63,16 +71,30 @@ X_test = load_sparse_csr(feature_set_path +  r'binaryWordData'+tag+'_test.npz')
 y_train = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_train.npy')
 y_test = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_test.npy')
 
+scaler = preprocessing.StandardScaler().fit(X_train)
+X_train = scaler.transform(X_train)
+X_test = scaler.transform(X_test)
+
+print np.min(y_train)
+print np.max(y_train)
+print np.mean(y_train)
+print  'Loaded testing data\n'
+
 
 #model = SVR(C=1.0, gamma=1.0)
 model = LDA()
 model.fit(X_train, y_train)
 values = []
 for i, v in enumerate(model.coef_[0]):
-    values.append(tuple([i,v]))
+    values.append(tuple([i,abs(v)]))
     
 values.sort(key=operator.itemgetter(1))
 values = values[::-1]
-values = values[:10]
-print ["%3d : %0.5f" % (i[0],i[1]) for i in values]
-print [names[i[0]] for i in values]
+values_chosen = values[:10]
+print ["%3d : %0.5f" % (i[0],i[1]) for i in values_chosen]
+print [names[i[0]] for i in values_chosen]
+
+values_chosen = values[-10:]
+print ["%3d : %0.5f" % (i[0],i[1]) for i in values_chosen]
+print [names[i[0]] for i in values_chosen]
+

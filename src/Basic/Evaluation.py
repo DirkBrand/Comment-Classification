@@ -5,9 +5,7 @@ Created on 12 Aug 2015
 '''
 from FeatureExtraction.SentimentUtil import load_classifier
 from FeatureExtraction.main import load_sparse_csr, load_numpy_matrix
-from FeatureExtraction.mainExtractor import read_comments, read_toy_comments,\
-    read_slashdot_comments, extract_global_bag_of_words_processed, extract_words,\
-    UnigramBigramAnalyzer, extract_values
+from FeatureExtraction.mainExtractor import read_news24_comments,read_toy_comments, read_slashdot_comments
 import scipy
 from sklearn.externals import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -28,19 +26,33 @@ if __name__ == '__main__':
     
     # To process all the comments
     if set == 1:
-        articleList, commentList, parentList, commentCount = read_comments(comment_data_path + 'trainTestDataSet.txt')
+        df_comments = read_news24_comments(comment_data_path + 'trainTestDataSet.txt')
+        df_comments.sort('date', inplace=True)
+        df_comments.reset_index(inplace=True, drop=True)
+        df_thread_groupby = df_comments.groupby('thread_root_id')
+        set_tag = "_news24"
         tag = '_main'
     elif set == 2:
-        articleList, commentList, parentList, commentCount = read_toy_comments(comment_data_path + 'trainTestDataSet.txt', comment_data_path + 'toyComments.csv')
+        df_comments = read_toy_comments(comment_data_path + 'trainTestDataSet.txt', comment_data_path + 'toyComments.csv')
+        df_comments.sort('date', inplace=True)
+        df_comments.reset_index(inplace=True, drop=True)
+        df_thread_groupby = df_comments.groupby('thread_root_id')
+        set_tag = "_news24"
         tag = '_toy'
     elif set == 3:
-        articleList, commentList, commentCount = read_slashdot_comments(comment_data_path + 'slashdotDataSet.txt', limit=100000)
+        df_comments = read_slashdot_comments(comment_data_path + 'slashdotDataSet_latest.txt')[:100000]
+        df_comments.sort('date', inplace=True)
+        df_comments.reset_index(inplace=True, drop=True)
+        df_thread_groupby = df_comments.groupby('thread_root_id')
+        set_tag = "_slashdot"
         tag = '_slashdot'
+        
     
     processed_comment_list = []
-    for art in commentList.items():        
-        for comm in art[1]:  
-            processed_comment_list.append(comm.body.decode('ascii','ignore'))
+    for _, row in df_comments.iterrows():  
+        comm = row['comment_content'] 
+        processed_comment_list.append(comm.decode('ascii','ignore'))
+        
     features = vectorizer.transform(processed_comment_list)
 
     y_train = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_train.npy')
@@ -65,7 +77,7 @@ if __name__ == '__main__':
     print "Accuracy: %0.3f " % (accuracy_score(valueVector, predicted))
                 
     
-    print classification_report(valueVector, predicted, target_names=['0','1'])
+    print classification_report(valueVector, predicted, target_names=['0','1'],digits=3 )
     print draw_confusion_matrix(valueVector, predicted, ['ham','spam'])
     
     

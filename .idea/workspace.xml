@@ -13,8 +13,8 @@
   <component name="ChangesViewManager" flattened_view="true" show_ignored="false" />
   <component name="CoverageDataManager">
     <SUITE FILE_PATH="coverage/NLTK comments$testScript__1_.coverage" NAME="testScript (1) Coverage Results" MODIFIED="1421153923586" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
-    <SUITE FILE_PATH="coverage/NLTK comments$Rating_Predictor.coverage" NAME="Rating Predictor Coverage Results" MODIFIED="1421615735293" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/RatingPrediction" />
     <SUITE FILE_PATH="coverage/NLTK comments$testScript.coverage" NAME="testScript Coverage Results" MODIFIED="1421153834603" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/NLTK comments$Rating_Predictor.coverage" NAME="Rating Predictor Coverage Results" MODIFIED="1421615735293" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/RatingPrediction" />
     <SUITE FILE_PATH="coverage/NLTK comments$main.coverage" NAME="main Coverage Results" MODIFIED="1421398240725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/FeatureExtraction" />
     <SUITE FILE_PATH="coverage/NLTK comments$mainExtractor.coverage" NAME="mainExtractor Coverage Results" MODIFIED="1421330321986" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/FeatureExtraction" />
   </component>
@@ -30,10 +30,10 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="main.py" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="main.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="108" column="0" selection-start="3996" selection-end="3996" vertical-scroll-proportion="0.0" vertical-offset="1836" max-vertical-offset="2822">
+            <state line="79" column="4" selection-start="3061" selection-end="3061" vertical-scroll-proportion="0.33333334" vertical-offset="474" max-vertical-offset="8432">
               <folding />
             </state>
           </provider>
@@ -42,34 +42,7 @@
       <file leaf-file-name="mainExtractor.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/mainExtractor.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="224" column="16" selection-start="7659" selection-end="7659" vertical-scroll-proportion="0.0" vertical-offset="3808" max-vertical-offset="16915">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="main.py" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/RatingPrediction/main.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="134" column="4" selection-start="3519" selection-end="3519" vertical-scroll-proportion="0.62554115" vertical-offset="1275" max-vertical-offset="5814">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Regression.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/RatingPrediction/Regression.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="47" column="0" selection-start="1013" selection-end="1013" vertical-scroll-proportion="0.0" vertical-offset="181" max-vertical-offset="1105">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Main.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/TopicDiscovery/Main.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="97" column="27" selection-start="2696" selection-end="2696" vertical-scroll-proportion="0.0" vertical-offset="1649" max-vertical-offset="2567">
+            <state line="65" column="0" selection-start="2157" selection-end="2157" vertical-scroll-proportion="0.0" vertical-offset="357" max-vertical-offset="26469">
               <folding />
             </state>
           </provider>
@@ -147,7 +120,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="NLTK comments" />
+              <option name="myItemId" value="CommentsClassification" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -157,7 +130,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="NLTK comments" />
+              <option name="myItemId" value="CommentsClassification" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
@@ -171,25 +144,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="NLTK comments" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="RatingPrediction" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="NLTK comments" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="NLTK comments" />
+              <option name="myItemId" value="CommentsClassification" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
@@ -391,6 +346,9 @@
       <option name="PARAMETERS" value="" />
       <method />
     </configuration>
+    <configuration default="true" type="JavascriptDebugType" factoryName="JavaScript Debug" singleton="true">
+      <method />
+    </configuration>
     <configuration default="true" type="tests" factoryName="Unittests">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -412,9 +370,6 @@
       <option name="PUREUNITTEST" value="true" />
       <option name="PARAMS" value="" />
       <option name="USE_PARAM" value="false" />
-      <method />
-    </configuration>
-    <configuration default="true" type="JavascriptDebugType" factoryName="JavaScript Debug" singleton="true">
       <method />
     </configuration>
     <configuration default="true" type="tests" factoryName="Doctests">
@@ -527,7 +482,7 @@
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.15729167" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.13802083" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25894737" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25894737" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
@@ -535,11 +490,11 @@
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
     </layout>
   </component>
   <component name="Vcs.Log.UiProperties">
@@ -557,17 +512,38 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/src/FeatureExtraction/mainExtractor.py</url>
-          <line>280</line>
-          <option name="timeStamp" value="2" />
-        </line-breakpoint>
-      </breakpoints>
       <option name="time" value="10" />
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="108" column="0" selection-start="4235" selection-end="4235" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="8993">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/mainExtractor.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="224" column="16" selection-start="7483" selection-end="7483" vertical-scroll-proportion="0.0" vertical-offset="3808" max-vertical-offset="27302">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/RatingPrediction/main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="134" column="4" selection-start="3828" selection-end="3828" vertical-scroll-proportion="0.0" vertical-offset="2278" max-vertical-offset="10540">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/RatingPrediction/Regression.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="47" column="0" selection-start="1313" selection-end="1313" vertical-scroll-proportion="0.0" vertical-offset="799" max-vertical-offset="1275">
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/main.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="103" column="0" selection-start="3647" selection-end="3647" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2737">
@@ -596,13 +572,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/TopicDiscovery/Main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="97" column="27" selection-start="2696" selection-end="2696" vertical-scroll-proportion="0.0" vertical-offset="1649" max-vertical-offset="2567">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/main.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="104" column="43" selection-start="3695" selection-end="3695" vertical-scroll-proportion="0.0" vertical-offset="1768" max-vertical-offset="2737">
@@ -627,13 +596,6 @@
     <entry file="file://$PROJECT_DIR$/src/RatingPrediction/Regression.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="47" column="0" selection-start="1013" selection-end="1013" vertical-scroll-proportion="0.0" vertical-offset="493" max-vertical-offset="1105">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/TopicDiscovery/Main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="97" column="27" selection-start="2696" selection-end="2696" vertical-scroll-proportion="0.0" vertical-offset="1649" max-vertical-offset="2567">
           <folding />
         </state>
       </provider>
@@ -672,19 +634,9 @@
         <state line="138" column="4" selection-start="2962" selection-end="2962" vertical-scroll-proportion="0.0" vertical-offset="2346" max-vertical-offset="2737" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/testScript.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="12" column="14" selection-start="275" selection-end="275" vertical-scroll-proportion="0.0" vertical-offset="204" max-vertical-offset="306" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/RatingPrediction/main.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="10" column="35" selection-start="217" selection-end="217" vertical-scroll-proportion="0.0" vertical-offset="170" max-vertical-offset="1479" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/testScript.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="12" column="14" selection-start="275" selection-end="275" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="306" />
       </provider>
     </entry>
     <entry file="file://C:/Python27/Lib/re.py">
@@ -712,11 +664,6 @@
         <state line="68" column="154" selection-start="1899" selection-end="1899" vertical-scroll-proportion="0.0" vertical-offset="930" max-vertical-offset="5372" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/TopicDiscovery/lda.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2669" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/LexicalFeatures.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="135" column="4" selection-start="3308" selection-end="3308" vertical-scroll-proportion="0.7241888" vertical-offset="1702" max-vertical-offset="2380" />
@@ -730,13 +677,6 @@
     <entry file="file://C:/Python27/Lib/site-packages/nltk/tag/sequential.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="56" column="0" selection-start="2170" selection-end="2170" vertical-scroll-proportion="0.0" vertical-offset="641" max-vertical-offset="11407" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/TopicDiscovery/Main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="97" column="27" selection-start="2696" selection-end="2696" vertical-scroll-proportion="0.0" vertical-offset="988" max-vertical-offset="2278">
-          <folding />
-        </state>
       </provider>
     </entry>
     <entry file="file://C:/Python27/Lib/site-packages/nltk/tokenize/regexp.py">
@@ -754,13 +694,6 @@
         <state line="10" column="28" selection-start="304" selection-end="304" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="867" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="108" column="0" selection-start="3996" selection-end="3996" vertical-scroll-proportion="0.0" vertical-offset="1836" max-vertical-offset="2822">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://C:/Python27/Lib/site-packages/sklearn/preprocessing/data.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="74" column="0" selection-start="1999" selection-end="1999" vertical-scroll-proportion="-1.2222222" vertical-offset="1683" max-vertical-offset="18445" />
@@ -768,21 +701,28 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/RatingPrediction/Regression.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="47" column="0" selection-start="1013" selection-end="1013" vertical-scroll-proportion="0.0" vertical-offset="493" max-vertical-offset="1105">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/mainExtractor.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="224" column="16" selection-start="7659" selection-end="7659" vertical-scroll-proportion="0.0" vertical-offset="3808" max-vertical-offset="16915">
+        <state line="47" column="0" selection-start="1313" selection-end="1313" vertical-scroll-proportion="0.0" vertical-offset="799" max-vertical-offset="1275">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/RatingPrediction/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="134" column="4" selection-start="3519" selection-end="3519" vertical-scroll-proportion="0.62554115" vertical-offset="1275" max-vertical-offset="5814">
+        <state line="134" column="4" selection-start="3828" selection-end="3828" vertical-scroll-proportion="-0.4478595" vertical-offset="2278" max-vertical-offset="10540">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/mainExtractor.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="65" column="0" selection-start="2157" selection-end="2157" vertical-scroll-proportion="0.0" vertical-offset="357" max-vertical-offset="26469">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/FeatureExtraction/main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="79" column="4" selection-start="3061" selection-end="3061" vertical-scroll-proportion="0.33333334" vertical-offset="474" max-vertical-offset="8432">
           <folding />
         </state>
       </provider>

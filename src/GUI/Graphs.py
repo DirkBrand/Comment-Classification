@@ -24,15 +24,15 @@ headers = ['timely' , 'timePassing' , 'commLengthiness' , 'numberCharacters' ,'v
 
 datatype = 1
 
+if datatype == 1:
+    tag = '_main'
+elif datatype == 2:
+    tag = "_toy"
+elif datatype == 3:
+    tag = '_slashdot'
+    
 def getDataSets(normalize=False, selected=False):
-    if datatype == 1:
-        tag = '_main'
-    elif datatype == 2:
-        tag = "_toy"
-    elif datatype == 3:
-        tag = '_slashdot'
-        
-        
+    
     y_train = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_train.npy')
     y_test = load_numpy_matrix(feature_set_path +  r'valueVector'+tag+'_test.npy')
     
@@ -47,27 +47,6 @@ def getDataSets(normalize=False, selected=False):
     return X_train, X_test, y_train, y_test
             
 def is_outlier(points, thresh=3.5):
-    """
-    Returns a boolean array with True if points are outliers and False 
-    otherwise.
-
-    Parameters:
-    -----------
-        points : An numobservations by numdimensions array of observations
-        thresh : The modified z-score to use as a threshold. Observations with
-            a modified z-score (based on the median absolute deviation) greater
-            than this value will be classified as outliers.
-
-    Returns:
-    --------
-        mask : A numobservations-length boolean array.
-
-    References:
-    ----------
-        Boris Iglewicz and David Hoaglin (1993), "Volume 16: How to Detect and
-        Handle Outliers", The ASQC Basic References in Quality Control:
-        Statistical Techniques, Edward F. Mykytka, Ph.D., Editor. 
-    """
     if len(points.shape) == 1:
         points = points[:,None]
     median = np.median(points, axis=0)
@@ -78,23 +57,12 @@ def is_outlier(points, thresh=3.5):
     modified_z_score = 0.6745 * diff / med_abs_deviation
 
     return modified_z_score > thresh                                             
-                                             
-type = ['(TEST)', '(TRAIN)']
-scaled = ['(PLAIN)', '(NORMALIZED)']
-
+                              
 bincount = 500
-
-
-values = False
-features = True
-
-timeData = False
-
 
 
 if __name__ == '__main__': 
     
-    os.chdir('D:\Workspace\NLTK comments\src\RatingPrediction')
     X, Xt, y, yt = getDataSets(False, False)  
     
     print np.min(y)
@@ -104,18 +72,19 @@ if __name__ == '__main__':
     
     
     print 'Number of training rows:', len(X)
-    
-    feat = 33
-    
-    
-    print feat
-    Xn = X[:,feat]
-    Xn = Xn[~is_outlier(Xn)]
-    plt.hist(Xn, bins=bincount)
-    #plt.title(headers[feat])
-    plt.ylabel("Frequency")
-    plt.xlabel("Value")
-    plt.savefig(r'D:\REPOS\meesters-documentation\Final Report\Pictures\Graphs\g' + str(feat+1) +  '.png', bbox_inches='tight')
+        
+    for feat in range(33):
+        print feat
+        Xn = X[:,feat]
+        x_range = max(Xn) - min(Xn)
+        plt.figure()
+        plt.hist(Xn, bins=bincount)
+        if feat != 7:
+            plt.xlim([min(Xn)-x_range*0.05,max(Xn)+x_range*0.05])
+        #plt.title(headers[feat])
+        #plt.ylabel("Frequency")
+        #plt.xlabel("Value")
+        plt.savefig(r'D:\REPOS\meesters-documentation\Final Report\Pictures\Graphs\g' + str(feat+1) + tag +  '.png', bbox_inches='tight')
 
        
     
